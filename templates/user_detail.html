@@ -1,0 +1,20 @@
+<!-- user_detail.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Detail</title>
+</head>
+<body>
+    <h1>User Detail</h1>
+    <p>Nickname: {{ user.nickname }}</p>
+    <p>Profile Image: <img src="{{ user.profile_img.url }}" alt="Profile Image"></p>
+    <p>Description: {{ user.description }}</p>
+    <p>Language: {{ user.language }}</p>
+    <p>Want Language: {{ user.want_language }}</p>
+    <a href="{% url 'user_update' pk=user.pk %}">Edit</a>
+    <a href="{% url 'user_delete' pk=user.pk %}">Delete</a>
+</body>
+</html>
