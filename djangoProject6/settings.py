@@ -42,8 +42,16 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'rest_auth',
     'rest_auth.registration',
-    'rest_framework.api'
+    'corsheaders'
+
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -53,8 +61,15 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
+#cors설정 추가
+CORS_ALLOWED_ORIGINS = [
+    "http://ec2-3-37-108-96.ap-northeast-2.compute.amazonaws.com",
+    "https://ec2-3-37-108-96.ap-northeast-2.compute.amazonaws.com",
+
+]
 ROOT_URLCONF = 'djangoProject6.urls'
 
 TEMPLATES = [

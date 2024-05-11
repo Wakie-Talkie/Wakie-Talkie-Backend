@@ -21,32 +21,51 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from wakietalkie import views
+from django.views.generic.base import RedirectView
+from django.urls import path
+from wakietalkie.views import *
+
+from django.contrib import admin
+from django.urls import path, include
+from wakietalkie.views import *
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
-    #path('wakietalkie/', include('wakietalkie.urls')),  # wakietalkie 앱의 URL 패턴을 포함
-    path('', views.user_list, name='user_list'),
-    path('create/', views.user_create, name='user_create'),
-    path('<int:pk>/', views.user_detail, name='user_detail'),
-    path('<int:pk>/update/', views.user_update, name='user_update'),
-    path('<int:pk>/delete/', views.user_delete, name='user_delete'),
-    # AI 사용자와 관련된 URL 패턴 추가
-    path('create/ai_users/', views.ai_user_create, name='ai_user_create'),
-    path('create/ai_users/', views.ai_user_list, name='ai_user_list'),
-    path('create/ai_users/<int:pk>/', views.ai_user_detail, name='ai_user_detail'),
-    path('create/ai_users/<int:pk>/update/', views.ai_user_update, name='ai_user_update'),
-    path('create/ai_users/<int:pk>/delete/', views.ai_user_delete, name='ai_user_delete'),
-    #serializer
-    path('users/', views.UserListAPIView.as_view(), name='user-list'),
-    path('ai_users/', views.AIUserListAPIView.as_view(), name='ai_user-list'),
-    # CREATE(Create)
-    path('users/create/', views.UserCreateAPIView.as_view(), name='user_create'),
-    path('ai_users/create/', views.AIUserCreateAPIView.as_view(), name='ai_user_create'),
-    # UPDATE(Update)
-    path('users/<int:pk>/update/', views.UserUpdateAPIView.as_view(), name='user_update'),
-    path('ai_users/<int:pk>/update/', views.AIUserUpdateAPIView.as_view(), name='ai_user_update'),
-    # DELETE(Delete)
-    path('users/<int:pk>/delete/', views.UserDeleteAPIView.as_view(), name='user_delete'),
-    path('ai_users/<int:pk>/delete/', views.AIUserDeleteAPIView.as_view(), name='ai_user_delete'),
+    path('admin/', admin.site.urls),
+    path('accounts/', include('django.contrib.auth.urls')),
+    # User API endpoints
+    path('users/', UserListCreateAPIView.as_view(), name='user-list'),
+    path('users/<int:pk>/', UserDetailAPIView.as_view(), name='user-detail'),
+    path('users/create/', UserListCreateAPIView.as_view(), name='user-create'),
+    path('users/update/<int:pk>/', UserDetailAPIView.as_view(), name='user-update'),
+    path('users/delete/<int:pk>/', UserDetailAPIView.as_view(), name='user-delete'),
+    path('users/<int:user_id>/update/profile_img/', UserDetailAPIView.as_view(), name='user-update-profile-img'),
+    path('users/<int:user_id>/update/nickname/', UserDetailAPIView.as_view(), name='user-update-nickname'),
+    path('users/<int:user_id>/update/want_language/', UserDetailAPIView.as_view(), name='user-update-want-language'),
+    path('users/<int:user_id>/update/description/', UserDetailAPIView.as_view(), name='user-update-description'),
+
+    # AI User API endpoints
+    path('ai-users/', AIUserListCreateAPIView.as_view(), name='ai-user-list'),
+    path('ai-users/<int:pk>/', AIUserDetailAPIView.as_view(), name='ai-user-detail'),
+    path('ai-users/create/', AIUserListCreateAPIView.as_view(), name='ai-user-create'),
+    path('ai-users/update/<int:pk>/', AIUserDetailAPIView.as_view(), name='ai-user-update'),
+    path('ai-users/delete/<int:pk>/', AIUserDetailAPIView.as_view(), name='ai-user-delete'),
+    path('ai-users/language/<int:language_id>/', AIUserListByLanguageAPIView.as_view(), name='ai-user-list-by-language'),
+    # Recording API endpoints
+    path('recordings/', RecordingListCreateAPIView.as_view(), name='recording-list'),
+    path('recordings/<int:pk>/', RecordingDetailAPIView.as_view(), name='recording-detail'),
+    path('recordings/create/', RecordingListCreateAPIView.as_view(), name='recording-create'),
+    path('recordings/update/<int:pk>/', RecordingDetailAPIView.as_view(), name='recording-update'),
+    path('recordings/delete/<int:pk>/', RecordingDetailAPIView.as_view(), name='recording-delete'),
+    path('recordings/user/<int:user_id>/', RecordingListByUserView.as_view(), name='recording-list-by-user'),
+
+    # VocabList API endpoints
+    path('vocab-lists/', VocabListListCreateAPIView.as_view(), name='vocab-list-list'),
+    path('vocab-lists/<int:pk>/', VocabListDetailAPIView.as_view(), name='vocab-list-detail'),
+    path('vocab-lists/create/', VocabListListCreateAPIView.as_view(), name='vocab-list-create'),
+    path('vocab-lists/update/<int:pk>/', VocabListDetailAPIView.as_view(), name='vocab-list-update'),
+    path('vocab-lists/delete/<int:pk>/', VocabListDetailAPIView.as_view(), name='vocab-list-delete'),
+    path('vocab-lists/latest/', LatestVocabListView.as_view(), name='latest-vocab-list'),
+    path('vocab-lists/', VocabListView.as_view(), name='vocab-list'),
 ]
+
 

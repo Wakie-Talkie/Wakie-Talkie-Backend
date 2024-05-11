@@ -1,148 +1,212 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import User, AI_User, Alarm, Language
-from .forms import UserForm, AI_UserForm, AlarmForm
+from .models import User, AI_User, Language
+from .forms import UserForm, AI_UserForm, RecordingForm, VocabListForm
 from rest_framework import generics
 from .models import User, AI_User
 from .serializers import UserSerializer, AIUserSerializer
-from django.http import JsonResponse
 from openai import OpenAI
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from django.http import JsonResponse
+from django.views.generic import ListView, DetailView
+from .models import User, AI_User, Recording, VocabList
+from django.views.generic import CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from . import serializers
+def index(request):
+    return HttpResponse("Welcome to my Django Project!")
 
-# 사용자 리스트 보기
-def user_list(request):
-    users = User.objects.all()
-    return render(request, 'user_list.html', {'users': users})
+# Helper function to serialize list of objects
+def serialize_list(objects, serializer_class):
+    serializer = serializer_class(objects, many=True)
+    return serializer.data
 
-# 사용자 추가
-def user_create(request):
-    if request.method == 'POST':
-        form = UserForm(request.POST, request.FILES)
-        if form.is_valid():
-            form.save()
-            return redirect('user_list')
-    else:
-        form = UserForm()
-    return render(request, 'user_create.html', {'form': form})
+# Helper function to serialize single object
+def serialize_object(obj, serializer_class):
+    serializer = serializer_class(obj)
+    return serializer.data
 
-# 사용자 상세 정보 보기
-def user_detail(request, pk):
-    user = get_object_or_404(User, pk=pk)
-    return render(request, 'user_detail.html', {'user': user})
-
-# 사용자 수정
-def user_update(request, pk):
-    user = get_object_or_404(User, pk=pk)
-    if request.method == 'POST':
-        form = UserForm(request.POST, request.FILES, instance=user)
-        if form.is_valid():
-            form.save()
-            return redirect('user_detail', pk=user.pk)
-    else:
-        form = UserForm(instance=user)
-    return render(request, 'user_update.html', {'form': form})
-
-# 사용자 삭제
-def user_delete(request, pk):
-    user = get_object_or_404(User, pk=pk)
-    if request.method == 'POST':
-        user.delete()
-        return redirect('user_list')
-    return render(request, 'user_delete_confirm.html', {'user': user})
-
-# AI 사용자 리스트 보기
-def ai_user_list(request):
-    ai_users = AI_User.objects.all()
-    return render(request, 'ai_user_list.html', {'ai_users': ai_users})
-
-# AI 사용자 추가
-def ai_user_create(request):
-    if request.method == 'POST':
-        form = AI_UserForm(request.POST, request.FILES)
-        if form.is_valid():
-            form.save()
-            return redirect('ai_user_list')
-    else:
-        form = AI_UserForm()
-    return render(request, 'ai_user_create.html', {'form': form})
-
-# AI 사용자 상세 정보 보기
-def ai_user_detail(request, pk):
-    ai_user = get_object_or_404(AI_User, pk=pk)
-    return render(request, 'ai_user_detail.html', {'ai_user': ai_user})
-
-# AI 사용자 수정
-def ai_user_update(request, pk):
-    ai_user = get_object_or_404(AI_User, pk=pk)
-    if request.method == 'POST':
-        form = AI_UserForm(request.POST, request.FILES, instance=ai_user)
-        if form.is_valid():
-            form.save()
-            return redirect('ai_user_detail', pk=ai_user.pk)
-    else:
-        form = AI_UserForm(instance=ai_user)
-    return render(request, 'ai_user_update.html', {'form': form})
-
-# AI 사용자 삭제
-def ai_user_delete(request, pk):
-    ai_user = get_object_or_404(AI_User, pk=pk)
-    if request.method == 'POST':
-        ai_user.delete()
-        return redirect('ai_user_list')
-    return render(request, 'ai_user_delete_confirm.html', {'ai_user': ai_user})
-
-#serializer사용 api view
-
-class UserListAPIView(APIView):
-    def get(self, request):
+# User List and Create View
+class UserListCreateAPIView(APIView):
+    def get(self, request, format=None):
         users = User.objects.all()
-        serializer = UserSerializer(users, many=True)
-        return Response(serializer.data)
+        return Response(serialize_list(users, UserSerializer))
 
-    def post(self, request):
+    def post(self, request, format=None):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class AIUserListAPIView(APIView):
-    def get(self, request):
-        ai_users = AI_User.objects.all()
-        serializer = AIUserSerializer(ai_users, many=True)
-        return Response(serializer.data)
+# User Detail, Update and Delete View
+class UserDetailAPIView(APIView):
+    def get_object(self, pk):
+        return get_object_or_404(User, pk=pk)
 
-    def post(self, request):
+    def get(self, request, pk, format=None):
+        user = self.get_object(pk)
+        return Response(serialize_object(user, UserSerializer))
+
+    def put(self, request, pk, format=None):
+        user = self.get_object(pk)
+        serializer = UserSerializer(user, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk, format=None):
+        user = self.get_object(pk)
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+# AI User List and Create View
+class AIUserListCreateAPIView(APIView):
+    def get(self, request, format=None):
+        ai_users = AI_User.objects.all()
+        return Response(serialize_list(ai_users, AIUserSerializer))
+
+    def post(self, request, format=None):
         serializer = AIUserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# CREATE(Create)
-class UserCreateAPIView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+# AI User Detail, Update and Delete View
+class AIUserDetailAPIView(APIView):
+    def get_object(self, pk):
+        return get_object_or_404(AI_User, pk=pk)
 
-class AIUserCreateAPIView(generics.CreateAPIView):
-    queryset = AI_User.objects.all()
+    def get(self, request, pk, format=None):
+        ai_user = self.get_object(pk)
+        return Response(serialize_object(ai_user, AIUserSerializer))
+
+    def put(self, request, pk, format=None):
+        ai_user = self.get_object(pk)
+        serializer = AIUserSerializer(ai_user, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk, format=None):
+        ai_user = self.get_object(pk)
+        ai_user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+#Language로 ai-user list
+class AIUserListByLanguageAPIView(generics.ListAPIView):
     serializer_class = AIUserSerializer
 
-# UPDATE(Update)
-class UserUpdateAPIView(generics.RetrieveUpdateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+    def get_queryset(self):
+        language_id = self.request.query_params.get('language', None)
+        if language_id is not None:
+            return AI_User.objects.filter(language=language_id)
+        else:
+            return AI_User.objects.all()
 
-class AIUserUpdateAPIView(generics.RetrieveUpdateAPIView):
-    queryset = AI_User.objects.all()
-    serializer_class = AIUserSerializer
+# Recording List and Create View
+class RecordingListCreateAPIView(APIView):
+    def get(self, request, format=None):
+        recordings = Recording.objects.all()
+        return Response(serialize_list(recordings, RecordingSerializer))
 
-# DELETE(Delete)
-class UserDeleteAPIView(generics.DestroyAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+    def post(self, request, format=None):
+        serializer = RecordingSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class AIUserDeleteAPIView(generics.DestroyAPIView):
-    queryset = AI_User.objects.all()
-    serializer_class = AIUserSerializer
+# Recording Detail, Update and Delete View
+class RecordingDetailAPIView(APIView):
+    def get_object(self, pk):
+        return get_object_or_404(Recording, pk=pk)
+
+    def get(self, request, pk, format=None):
+        recording = self.get_object(pk)
+        return Response(serialize_object(recording, RecordingSerializer))
+
+    def put(self, request, pk, format=None):
+        recording = self.get_object(pk)
+        serializer = RecordingSerializer(recording, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk, format=None):
+        recording = self.get_object(pk)
+        recording.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# Recording List By User View
+class RecordingListByUserView(APIView):
+    def get(self, request, user_id, format=None):
+        recordings = Recording.objects.filter(user_id=user_id)
+        serializer = RecordingSerializer(recordings, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, user_id, format=None):
+        request.data['user_id'] = user_id  # Ensure user_id is set before saving
+        serializer = RecordingSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# VocabList List and Create View
+class VocabListListCreateAPIView(APIView):
+    def get(self, request, format=None):
+        vocab_lists = VocabList.objects.all()
+        return Response(serialize_list(vocab_lists, VocabListSerializer))
+
+    def post(self, request, format=None):
+        serializer = VocabListSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# VocabList Detail, Update and Delete View
+class VocabListDetailAPIView(APIView):
+    def get_object(self, pk):
+        return get_object_or_404(VocabList, pk=pk)
+
+    def get(self, request, pk, format=None):
+        vocab_list = self.get_object(pk)
+        return Response(serialize_object(vocab_list, VocabListSerializer))
+
+    def put(self, request, pk, format=None):
+        vocab_list = self.get_object(pk)
+        serializer = VocabListSerializer(vocab_list, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk, format=None):
+        vocab_list = self.get_object(pk)
+        vocab_list.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+# Latest VocabList View
+class LatestVocabListView(APIView):
+    def get(self, request, format=None):
+        latest_vocab_list = VocabList.objects.latest('created_at')
+        serializer = VocabListSerializer(latest_vocab_list)
+        return Response(serializer.data)
+
+# VocabList View
+class VocabListView(APIView):
+    def get(self, request, format=None):
+        vocab_lists = VocabList.objects.all()
+        serializer = VocabListSerializer(vocab_lists, many=True)
+        return Response(serializer.data)
