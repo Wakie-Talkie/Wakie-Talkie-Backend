@@ -105,9 +105,9 @@ class AIUserListByLanguageAPIView(generics.ListAPIView):
     serializer_class = AIUserSerializer
 
     def get_queryset(self):
-        language_id = self.request.query_params.get('language', None)
+        language_id = self.kwargs.get('language_id')  # URL에서 언어 ID를 가져옵니다.
         if language_id is not None:
-            return AI_User.objects.filter(language=language_id)
+            return AI_User.objects.filter(language_id=language_id)
         else:
             return AI_User.objects.all()
 
