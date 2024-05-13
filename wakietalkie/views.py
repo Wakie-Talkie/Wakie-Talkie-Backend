@@ -214,7 +214,7 @@ class VocabListView(APIView):
 
 #STT,GPT,TTS에 관한 view
 def sttgpttts(audio_file_path, ai_user_info, gpt_history):
-    OPENAI_API_KEY = "키값 적으세용"
+    OPENAI_API_KEY = "your key"
     client = OpenAI(api_key=OPENAI_API_KEY)
     # STT (음성을 텍스트로 변환하는 함수)
     def stt_function(audio_file_path):
