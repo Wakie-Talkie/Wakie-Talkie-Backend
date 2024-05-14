@@ -300,3 +300,12 @@ class SttGptTtsResponse(APIView):
         # STT, GPT, TTS 처리
         tts_output, _ = sttgpttts(None, None, [])
         return Response({'transcription': tts_output})
+
+
+class TtsResponse(APIView):
+    def get(self, request):
+        # STT, GPT, TTS 처리
+        tts_output, _ = sttgpttts(None, None, [])
+
+        # TTS 처리 결과인 음성 데이터 반환
+        return Response({'audio_data': tts_output}, content_type='audio/mpeg')

@@ -66,6 +66,13 @@ urlpatterns = [
     path('vocab-lists/delete/<int:pk>/', VocabListDetailAPIView.as_view(), name='vocab-list-delete'),
     path('vocab-lists/latest/', LatestVocabListView.as_view(), name='latest-vocab-list'),
     path('vocab-lists/', VocabListView.as_view(), name='vocab-list'),
+
+    #STT,GPT,TTS에 관한 엔드포인트
+    path('upload-audio/', AudioFileUpload.as_view(), name='audio_upload'),
+    path('stt/transcription/', TranscriptionRetrieve.as_view(), name='stt_transcription'),
+    path('result/', SttGptTtsResponse.as_view(), name='stt_gpt_tts_response'),
+    path('tts-audio/', TtsResponse.as_view(), name='tts_audio_response'),  # TTS 처리된 음성 데이터 반환 엔드포인트
+
 ]
 
 
