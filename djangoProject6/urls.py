@@ -71,7 +71,11 @@ urlpatterns = [
     path('upload-audio/', AudioFileUpload.as_view(), name='audio_upload'),
     path('stt/transcription/', TranscriptionRetrieve.as_view(), name='stt_transcription'),
     path('result/', SttGptTtsResponse.as_view(), name='stt_gpt_tts_response'),
-    path('tts-audio/', TtsResponse.as_view(), name='tts_audio_response'),  # TTS 처리된 음성 데이터 반환 엔드포인트
+    # TTS로 생성된 음성 데이터를 반환하는 엔드포인트
+    path('tts-audio/', TtsResponse.as_view(), name='tts_audio_response'),
+
+    # 전체 대화 스크립트를 반환하는 엔드포인트
+    path('conversation/', ConversationScriptAPIView.as_view(), name='conversation_script'),
 
 ]
 

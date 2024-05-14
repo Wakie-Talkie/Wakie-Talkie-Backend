@@ -305,7 +305,16 @@ class SttGptTtsResponse(APIView):
 class TtsResponse(APIView):
     def get(self, request):
         # STT, GPT, TTS 처리
-        tts_output, _ = sttgpttts(None, None, [])
+        tts_output, gpt_history = sttgpttts(None, None, [])
 
-        # TTS 처리 결과인 음성 데이터 반환
-        return Response({'audio_data': tts_output}, content_type='audio/mpeg')
+
+class ConversationScriptAPIView(APIView):
+    def get(self, request):
+        # STT, GPT, TTS 처리
+        _, gpt_history = sttgpttts(None, None, [])
+
+        # 전체 대화 스크립트 생성
+        script = [{'user': item['user'], 'ai': item['ai']} for item in gpt_history]
+
+        # 전체 대화 스크립트 반환
+        return Response({'conversation_script': script})
