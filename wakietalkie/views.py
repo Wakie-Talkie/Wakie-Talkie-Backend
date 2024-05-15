@@ -1,14 +1,13 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import User, AI_User, Language
-from .forms import UserForm, AI_UserForm, RecordingForm, VocabListForm
+from .models import *
+from .forms import *
 from rest_framework import generics
-from .serializers import UserSerializer, AIUserSerializer,RecordingSerializer,VocabListSerializer,AudioFileSerializer, TranscriptionSerializer
+from .serializers import *
 from openai import OpenAI
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.http import JsonResponse
-from .models import User, AI_User, Recording, VocabList
 from django.views.generic import CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.http import HttpResponse
@@ -281,7 +280,7 @@ class AudioFileUpload(APIView):
         serializer = AudioFileSerializer(data=request.data)
         if serializer.is_valid():
             audio_file = serializer.validated_data['audio_file']
-            ai_user_id = request.user.id
+            ai_user_id = request.data.get('ai_user_id')
             ai_user_info = AI_User.objects.get(id=ai_user_id)
             # STT, GPT, TTS 처리
             tts_output, gpt_history = sttgpttts(audio_file, ai_user_info, [])
@@ -318,3 +317,95 @@ class ConversationScriptAPIView(APIView):
 
         # 전체 대화 스크립트 반환
         return Response({'conversation_script': script})
+
+#전화 시작과 끝
+from datetime import datetime
+
+def handle_call_start(start_time, ai_user_id):
+    # 전화가 시작된 시간과 전화를 한 AI 사용자의 ID를 기록하여 데이터베이스에 저장합니다.
+    CallRecord.objects.create(start_time=start_time, ai_user_id=ai_user_id)
+
+class CallStartAPIView(APIView):
+    def post(self, request):
+        # 전화가 시작되는 시간 기록
+        start_time = datetime.now()
+
+        # 전화를 시작한 AI 사용자의 정보 가져오기
+        ai_user_id = request.data.get('ai_user_id')
+        ai_user = AI_User.objects.get(id=ai_user_id)
+
+        # 전화가 시작됨을 처리하는 코드 추가
+        handle_call_start(start_time, ai_user_id)
+
+        # 통화 시작 시간과 AI 사용자 정보를 반환
+        response_data = {
+            'start_time': start_time,
+            'caller': ai_user.nickname,
+            'language': ai_user.language.name
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class CallEndAPIView(APIView):
+    def post(self, request):
+        # 통화가 종료된 시간 기록
+        end_time = datetime.now()
+
+        # 통화 시작 시간 가져오기
+        start_time_str = request.data.get('start_time')
+        start_time = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M:%S.%f')
+
+        # 통화의 기간 계산 (종료 시간 - 시작 시간)
+        duration = end_time - start_time
+
+        # 전화를 종료한 AI 사용자의 정보 가져오기
+        ai_user_id = request.data.get('ai_user_id')
+        ai_user = AI_User.objects.get(id=ai_user_id)
+
+        # 전화가 종료됨을 알리는 작업 수행
+        # 여기에 통화가 종료됨을 처리하는 코드를 추가합니다.
+
+        # 통화 종료 시간과 AI 사용자 정보, 통화 기간을 반환
+        response_data = {
+            'end_time': end_time,
+            'caller': ai_user.nickname,
+            'language': ai_user.language.name,
+            'duration': duration.total_seconds()  # 기간을 초 단위로 변환하여 반환
+            # 이전에 만든 전체 대화 텍스트와 오디오에 접근하여 추가 정보를 가져옵니다.
+            # 'conversation_text_url': 'URL_TO_CONVERSATION_TEXT',
+            # 'conversation_audio_url': 'URL_TO_CONVERSATION_AUDIO'
+        }
+        # 전화 종료 시 데이터베이스에 기록
+        CallRecord.objects.create(start_time=start_time, end_time=end_time, ai_user=ai_user)
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+# 통화 정보 및 대화 내용에 접근 가능한 API
+class CallInfoAPIView(APIView):
+    def post(self, request):
+        # 전화 종료 정보 가져오기
+        end_time_str = request.data.get('end_time')
+        end_time = datetime.strptime(end_time_str, '%Y-%m-%d %H:%M:%S.%f')
+
+        # 전화 시작 시간 가져오기
+        start_time_str = request.data.get('start_time')
+        start_time = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M:%S.%f')
+
+        # 통화의 기간 계산 (종료 시간 - 시작 시간)
+        duration = end_time - start_time
+
+        # 전화를 한 AI 사용자의 정보 가져오기
+        ai_user_id = request.data.get('ai_user_id')
+        ai_user = AI_User.objects.get(id=ai_user_id)
+
+        # 통화 정보 및 대화 내용 가져오기
+        call_info = {
+            'caller': ai_user.nickname,
+            'duration': duration.total_seconds(),  # 통화 기간을 초 단위로 변환하여 반환
+            'language': ai_user.language.name,
+            # 이전에 만든 전체 대화 텍스트와 오디오에 접근하여 추가 정보를 가져옵니다.
+            'conversation_text_url': 'URL_TO_CONVERSATION_TEXT',
+            'conversation_audio_url': 'URL_TO_CONVERSATION_AUDIO'
+        }
+
+        return Response(call_info, status=status.HTTP_200_OK)

@@ -76,7 +76,11 @@ urlpatterns = [
 
     # 전체 대화 스크립트를 반환하는 엔드포인트
     path('conversation/', ConversationScriptAPIView.as_view(), name='conversation_script'),
-
+    #call 관련 엔드포인트 시작,끝,끝난 후 정보
+    path('call/start/', CallStartAPIView.as_view(), name='call-start'),
+    path('call/end/', CallEndAPIView.as_view(), name='call-end'),
+    path('call/info/', CallInfoAPIView.as_view(), name='call-info'),
 ]
+
 
 
