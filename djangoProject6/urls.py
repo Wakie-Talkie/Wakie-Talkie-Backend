@@ -28,6 +28,8 @@ from wakietalkie.views import *
 from django.contrib import admin
 from django.urls import path, include
 from wakietalkie.views import *
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -42,6 +44,9 @@ urlpatterns = [
     path('users/<int:user_id>/update/nickname/', UserDetailAPIView.as_view(), name='user-update-nickname'),
     path('users/<int:user_id>/update/want_language/', UserDetailAPIView.as_view(), name='user-update-want-language'),
     path('users/<int:user_id>/update/description/', UserDetailAPIView.as_view(), name='user-update-description'),
+
+    #language API
+    path('languages/', LanguageListCreateAPIView.as_view(), name='language-list'),
 
     # AI User API endpoints
     path('ai-users/', AIUserListCreateAPIView.as_view(), name='ai-user-list'),
@@ -80,7 +85,7 @@ urlpatterns = [
     path('call/start/', CallStartAPIView.as_view(), name='call-start'),
     path('call/end/', CallEndAPIView.as_view(), name='call-end'),
     path('call/info/', CallInfoAPIView.as_view(), name='call-info'),
-]
+]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
 

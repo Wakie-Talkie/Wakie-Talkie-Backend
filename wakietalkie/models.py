@@ -1,7 +1,9 @@
 from django.db import models
+from django.utils import timezone
 
 # 언어
 class Language(models.Model):
+    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100)
 
     def __str__(self):
@@ -20,21 +22,21 @@ class User(models.Model):
 class AI_User(models.Model):
     id = models.AutoField(primary_key=True)
     nickname = models.CharField(max_length=100)
-    profile_img = models.ImageField(upload_to='ai_user_profile_images/')
+    profile_img = models.ImageField(upload_to='ai_user_profile_images/', null=True, blank=True)
     description = models.TextField()
     language = models.ForeignKey(Language, on_delete=models.CASCADE)
 
 # 기록 모델
 class Recording(models.Model):
     id = models.AutoField(primary_key=True)
-    user_id = models.ForeignKey(User, on_delete=models.CASCADE)
-    ai_partner_id = models.ForeignKey(AI_User, on_delete=models.CASCADE)
-    date = models.DateField()
+    user_id = models.IntegerField()
+    ai_partner_id = models.IntegerField()
+    date = models.DateTimeField(default=timezone.now)
     calling_time = models.CharField(max_length=20)
     converted_text_file = models.TextField()
     recorded_audio_file = models.FileField(upload_to='recordings/')
     #caller = models.ForeignKey(User, related_name='call_records', on_delete=models.CASCADE)  # 전화를 건 사용자 정보
-    language = models.ForeignKey(Language, on_delete=models.CASCADE,default=None)  # 대화를 한 언어 정보
+    language = models.IntegerField()
 
     def __str__(self):
         return f"Recording {self.id}"

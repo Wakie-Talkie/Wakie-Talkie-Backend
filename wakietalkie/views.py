@@ -1,4 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
+
+from djangoProject6 import settings
 from .models import *
 from .forms import *
 from rest_framework import generics
@@ -16,6 +18,18 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from . import serializers
 
 import os
+import tempfile
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.files.storage import FileSystemStorage
+import time
+
+def handle_uploaded_file(uploaded_file: InMemoryUploadedFile):
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+        for chunk in uploaded_file.chunks():
+            tmp_file.write(chunk)
+        return tmp_file.name  # 임시 파일 경로 반환
+
+
 def index(request):
     return HttpResponse("Welcome to my Django Project!")
 
@@ -63,6 +77,18 @@ class UserDetailAPIView(APIView):
         user = self.get_object(pk)
         user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+class LanguageListCreateAPIView(APIView):
+    def get(self, request, format=None):
+        languages = Language.objects.all()
+        return Response(serialize_list(languages, LanguageSerializer))
+    def post(self, request, format=None):
+        serializer = LanguageSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 # AI User List and Create View
 class AIUserListCreateAPIView(APIView):
@@ -213,58 +239,85 @@ class VocabListView(APIView):
 
 #STT,GPT,TTS에 관한 view
 def sttgpttts(audio_file_path, ai_user_info, gpt_history):
-    OPENAI_API_KEY = "your key"
+    OPENAI_API_KEY = "key"
+
     client = OpenAI(api_key=OPENAI_API_KEY)
     # STT (음성을 텍스트로 변환하는 함수)
     def stt_function(audio_file_path):
         client = OpenAI(api_key=OPENAI_API_KEY)
+        # file_bytes = audio_file_data.read()
         # 오디오 파일을 열어서 텍스트로 변환하는 요청을 보냅니다.
+        start_time = time.time()
         with open(audio_file_path, "rb") as audio_file:
             transcription = client.audio.transcriptions.create(file=audio_file, model="whisper-1")
-            return transcription.text
+            end_time = time.time()
+            # 걸린 시간 계산
+            elapsed_time = end_time - start_time
+
+            print(f"stt 작업에 걸린 시간: {elapsed_time} 초")
+        return transcription.text
 
     # GPT (대화를 생성하는 함수)
     def gpt_function(text, gpt_history):
         # OpenAI 클라이언트 초기화
         client = OpenAI(api_key=OPENAI_API_KEY)
         # 이전 대화 내용과 사용자의 설명을 포함하여 대화를 생성하는 요청을 보냅니다.
+        start_time = time.time()
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=gpt_history + [
                 {"role": "system", "content": ai_user_info.description},  # 시스템 메시지로 사용자 설명 추가
                 {"role": "user", "content": text},  # 사용자가 입력한 텍스트 추가
             ],
         )
+        end_time = time.time()
+        # 걸린 시간 계산
+        elapsed_time = end_time - start_time
+        print(f"gpt 작업에 걸린 시간: {elapsed_time} 초")
         # 대화 결과를 반환합니다.
         return response.choices[0].message.content, response.choices
 
     # TTS (텍스트를 음성으로 변환하는 함수)
     def tts_function(text, voice):
         # 음성 생성 요청을 보냅니다.
+        start_time = time.time()
         response = client.audio.speech.create(
             model="tts-1",
             #voice=ai_user_info.nickname,  # 사용자의 닉네임을 음성으로 사용합니다.
-            voice="alloy",
+            voice=voice,
             input=text
         )
+        end_time = time.time()
+
+        # 걸린 시간 계산
+        elapsed_time = end_time - start_time
+        print(f"tts api 작업에 걸린 시간: {elapsed_time} 초")
         # 생성된 음성을 반환합니다.
         #return response.choices[0].message.content
-
-        #for test
-        # API 응답을 파일로 저장합니다.
+        start_time = time.time()
+        media_root = settings.MEDIA_ROOT
         file_name = "output_audio.mp3"
-        with open(file_name, "wb") as audio_file:
-            audio_file.write(response.content)
+        # 파일의 전체 경로를 생성합니다.
+        file_path = os.path.join(media_root, file_name)
 
-        # 저장된 파일을 읽어서 음성 데이터를 반환합니다.
-        with open(file_name, "rb") as audio_file:
-            audio_data = audio_file.read()
+        # FileSystemStorage 인스턴스를 생성합니다.
+        fs = FileSystemStorage(location=media_root)
 
-        # 파일을 삭제합니다.
-        os.remove(file_name)
+        response.stream_to_file(file_path)
 
-        return audio_data
-    # 메인 로직
+        # 끝나는 시간 기록
+        end_time = time.time()
+
+        # 걸린 시간 계산
+        elapsed_time = end_time - start_time
+        print(f"tts 작업에 걸린 시간: {elapsed_time} 초")
+        # 파일을 저장합니다.
+        # with fs.open(file_name, 'wb') as f:
+        #     f.write(file_content)
+        #
+        print(fs.url(file_name))
+        return fs.url(file_name)
+
     # 1. 음성 파일을 텍스트로 변환합니다.
     transcription = stt_function(audio_file_path)
     # 2. GPT를 사용하여 대화를 생성합니다.
@@ -275,18 +328,54 @@ def sttgpttts(audio_file_path, ai_user_info, gpt_history):
     # 음성 결과와 GPT 대화 기록을 반환합니다.
     return tts_output, gpt_history
 
+
 class AudioFileUpload(APIView):
     def post(self, request):
-        serializer = AudioFileSerializer(data=request.data)
-        if serializer.is_valid():
-            audio_file = serializer.validated_data['audio_file']
-            ai_user_id = request.data.get('ai_user_id')
-            ai_user_info = AI_User.objects.get(id=ai_user_id)
+        data = request.data.copy()
+
+        # 기본값 설정
+        if 'calling_time' not in data:
+            data['calling_time'] = 'unknown'
+        if 'converted_text_file' not in data:
+            data['converted_text_file'] = 'No transcription available'
+        if 'language' not in data:
+            data['language'] = 1  # 기본 언어 설정
+
+        file_serializer = AudioFileSerializer(data=data)
+        if file_serializer.is_valid():
+            audio_file = file_serializer.save()
+
+            ai_user_id = audio_file.ai_partner_id
+            print(f"ai_user_id: {ai_user_id}")  # 디버깅 출력
+
+            try:
+                ai_user_info = AI_User.objects.get(id=ai_user_id)
+            except AI_User.DoesNotExist:
+                return Response({'error': 'AI_User matching the provided ID does not exist.'},
+                                status=status.HTTP_404_NOT_FOUND)
+
+            start_time = time.time()
+            original_path = audio_file.recorded_audio_file.path
+            base, ext = os.path.splitext(original_path)
+            new_path = base + '.mp3'
+            os.rename(original_path,new_path)
+            print(new_path)
+            audio_file.recorded_audio_file.name = new_path[len(settings.MEDIA_ROOT) + 1:]
+            audio_file.save()
+            end_time = time.time()
+
+            # 걸린 시간 계산
+            elapsed_time = end_time - start_time
+            print(f"파일 post 받은 거 저장 작업에 걸린 시간: {elapsed_time} 초")
+            print(audio_file.recorded_audio_file.name)
+            # audio_file = serializer.validated_data['recorded_audio_file']
+
             # STT, GPT, TTS 처리
-            tts_output, gpt_history = sttgpttts(audio_file, ai_user_info, [])
+            tts_output, gpt_history = sttgpttts(new_path, ai_user_info, [])
+
             return Response({'transcription': tts_output})
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class TranscriptionRetrieve(APIView):
     def get(self, request):
