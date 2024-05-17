@@ -12,7 +12,7 @@ from rest_framework import status
 from django.http import JsonResponse
 from django.views.generic import CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
-from django.http import HttpResponse
+from django.http import HttpResponse, FileResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from . import serializers
@@ -315,18 +315,19 @@ def sttgpttts(audio_file_path, ai_user_info, gpt_history):
         # with fs.open(file_name, 'wb') as f:
         #     f.write(file_content)
         #
-        print(fs.url(file_name))
-        return fs.url(file_name)
+        # print(fs.url(file_name))
+        # return fs.url(file_name)
+        return file_path
 
     # 1. 음성 파일을 텍스트로 변환합니다.
     transcription = stt_function(audio_file_path)
     # 2. GPT를 사용하여 대화를 생성합니다.
     gpt_output, gpt_history = gpt_function(transcription, gpt_history)
     # 3. 생성된 대화를 음성으로 변환합니다.
-    tts_output = tts_function(gpt_output, ai_user_info.nickname)  # 사용자의 언어로 설정
+    tts_output_path = tts_function(gpt_output, ai_user_info.nickname)  # 사용자의 언어로 설정
 
     # 음성 결과와 GPT 대화 기록을 반환합니다.
-    return tts_output, gpt_history
+    return tts_output_path, gpt_history
 
 
 class AudioFileUpload(APIView):
@@ -371,9 +372,10 @@ class AudioFileUpload(APIView):
             # audio_file = serializer.validated_data['recorded_audio_file']
 
             # STT, GPT, TTS 처리
-            tts_output, gpt_history = sttgpttts(new_path, ai_user_info, [])
-
-            return Response({'transcription': tts_output})
+            tts_output_path, gpt_history = sttgpttts(new_path, ai_user_info, [])
+            response = FileResponse(open(tts_output_path, 'rb'), content_type='application/octet-stream')
+            response['Content-Disposition'] = f'attachment; filename="output.mp3"'
+            return response
         else:
             return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

@@ -10,11 +10,11 @@ class AI_UserForm(forms.ModelForm):
     class Meta:
         model = AI_User
         fields = ['nickname', 'profile_img', 'description', 'language']
+
 class LanguageForm(forms.ModelForm):
     class Meta:
         model = Language
         fields = ['name']
-
 
 class RecordingForm(forms.ModelForm):
     class Meta:
