@@ -23,6 +23,8 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.storage import FileSystemStorage
 import time
 
+conversation_history = []
+
 def handle_uploaded_file(uploaded_file: InMemoryUploadedFile):
     with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
         for chunk in uploaded_file.chunks():
@@ -238,13 +240,13 @@ class VocabListView(APIView):
 
 
 #STT,GPT,TTS에 관한 view
-def sttgpttts(audio_file_path, ai_user_info, gpt_history):
+def sttgpttts(audio_file_path, ai_user_info):
     OPENAI_API_KEY = "key"
 
     client = OpenAI(api_key=OPENAI_API_KEY)
     # STT (음성을 텍스트로 변환하는 함수)
     def stt_function(audio_file_path):
-        client = OpenAI(api_key=OPENAI_API_KEY)
+        # client = OpenAI(api_key=OPENAI_API_KEY)
         # file_bytes = audio_file_data.read()
         # 오디오 파일을 열어서 텍스트로 변환하는 요청을 보냅니다.
         start_time = time.time()
@@ -258,24 +260,24 @@ def sttgpttts(audio_file_path, ai_user_info, gpt_history):
         return transcription.text
 
     # GPT (대화를 생성하는 함수)
-    def gpt_function(text, gpt_history):
+    def gpt_function(text):
         # OpenAI 클라이언트 초기화
-        client = OpenAI(api_key=OPENAI_API_KEY)
+        # client = OpenAI(api_key=OPENAI_API_KEY)
         # 이전 대화 내용과 사용자의 설명을 포함하여 대화를 생성하는 요청을 보냅니다.
+
+        conversation_history.append({"role": "user", "content": text})
         start_time = time.time()
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=gpt_history + [
-                {"role": "system", "content": ai_user_info.description},  # 시스템 메시지로 사용자 설명 추가
-                {"role": "user", "content": text},  # 사용자가 입력한 텍스트 추가
-            ],
+            messages=conversation_history,
         )
         end_time = time.time()
         # 걸린 시간 계산
         elapsed_time = end_time - start_time
         print(f"gpt 작업에 걸린 시간: {elapsed_time} 초")
+        conversation_history.append({"role": "assistant", "content": response.choices[0].message.content})
         # 대화 결과를 반환합니다.
-        return response.choices[0].message.content, response.choices
+        return response.choices[0].message.content, conversation_history
 
     # TTS (텍스트를 음성으로 변환하는 함수)
     def tts_function(text, voice):
@@ -301,7 +303,7 @@ def sttgpttts(audio_file_path, ai_user_info, gpt_history):
         file_path = os.path.join(media_root, file_name)
 
         # FileSystemStorage 인스턴스를 생성합니다.
-        fs = FileSystemStorage(location=media_root)
+        # fs = FileSystemStorage(location=media_root)
 
         response.stream_to_file(file_path)
 
@@ -311,23 +313,17 @@ def sttgpttts(audio_file_path, ai_user_info, gpt_history):
         # 걸린 시간 계산
         elapsed_time = end_time - start_time
         print(f"tts 작업에 걸린 시간: {elapsed_time} 초")
-        # 파일을 저장합니다.
-        # with fs.open(file_name, 'wb') as f:
-        #     f.write(file_content)
-        #
-        # print(fs.url(file_name))
-        # return fs.url(file_name)
         return file_path
 
     # 1. 음성 파일을 텍스트로 변환합니다.
     transcription = stt_function(audio_file_path)
     # 2. GPT를 사용하여 대화를 생성합니다.
-    gpt_output, gpt_history = gpt_function(transcription, gpt_history)
+    gpt_output, file_content = gpt_function(transcription)
     # 3. 생성된 대화를 음성으로 변환합니다.
     tts_output_path = tts_function(gpt_output, ai_user_info.nickname)  # 사용자의 언어로 설정
 
     # 음성 결과와 GPT 대화 기록을 반환합니다.
-    return tts_output_path, gpt_history
+    return tts_output_path, file_content
 
 
 class AudioFileUpload(APIView):
@@ -345,6 +341,10 @@ class AudioFileUpload(APIView):
         file_serializer = AudioFileSerializer(data=data)
         if file_serializer.is_valid():
             audio_file = file_serializer.save()
+            history_file_name = request.data.get('conversation_history_file')
+            media_root = settings.MEDIA_ROOT
+            # 파일의 전체 경로를 생성합니다.
+            history_file_path = os.path.join(media_root, f"{history_file_name}.txt")
 
             ai_user_id = audio_file.ai_partner_id
             print(f"ai_user_id: {ai_user_id}")  # 디버깅 출력
@@ -372,10 +372,14 @@ class AudioFileUpload(APIView):
             # audio_file = serializer.validated_data['recorded_audio_file']
 
             # STT, GPT, TTS 처리
-            tts_output_path, gpt_history = sttgpttts(new_path, ai_user_info, [])
-            response = FileResponse(open(tts_output_path, 'rb'), content_type='application/octet-stream')
-            response['Content-Disposition'] = f'attachment; filename="output.mp3"'
-            return response
+            tts_output_path, file_content = sttgpttts(new_path, ai_user_info)
+            # response = FileResponse(open(tts_output_path, 'rb'), content_type='application/octet-stream')
+            # response['Content-Disposition'] = f'attachment; filename="output.mp3"'
+            response_data = {
+                'history_gpt': file_content
+            }
+
+            return Response(response_data, status=status.HTTP_200_OK)
         else:
             return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -418,21 +422,9 @@ def handle_call_start(start_time, ai_user_id):
 
 class CallStartAPIView(APIView):
     def post(self, request):
-        # 전화가 시작되는 시간 기록
-        start_time = datetime.now()
-
-        # 전화를 시작한 AI 사용자의 정보 가져오기
-        ai_user_id = request.data.get('ai_user_id')
-        ai_user = AI_User.objects.get(id=ai_user_id)
-
-        # 전화가 시작됨을 처리하는 코드 추가
-        handle_call_start(start_time, ai_user_id)
-
-        # 통화 시작 시간과 AI 사용자 정보를 반환
+        conversation_history = []
         response_data = {
-            'start_time': start_time,
-            'caller': ai_user.nickname,
-            'language': ai_user.language.name
+            'start_time': "conversation history reset"
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
