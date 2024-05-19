@@ -321,7 +321,7 @@ def sttgpttts(audio_file_path, ai_user_info):
     gpt_output, file_content = gpt_function(transcription)
     # 3. 생성된 대화를 음성으로 변환합니다.
     tts_output_path = tts_function(gpt_output, ai_user_info.nickname)  # 사용자의 언어로 설정
-
+    print(f"history!!!!!!!:::: {conversation_history}")
     # 음성 결과와 GPT 대화 기록을 반환합니다.
     return tts_output_path, file_content
 
@@ -341,10 +341,6 @@ class AudioFileUpload(APIView):
         file_serializer = AudioFileSerializer(data=data)
         if file_serializer.is_valid():
             audio_file = file_serializer.save()
-            history_file_name = request.data.get('conversation_history_file')
-            media_root = settings.MEDIA_ROOT
-            # 파일의 전체 경로를 생성합니다.
-            history_file_path = os.path.join(media_root, f"{history_file_name}.txt")
 
             ai_user_id = audio_file.ai_partner_id
             print(f"ai_user_id: {ai_user_id}")  # 디버깅 출력
@@ -373,13 +369,9 @@ class AudioFileUpload(APIView):
 
             # STT, GPT, TTS 처리
             tts_output_path, file_content = sttgpttts(new_path, ai_user_info)
-            # response = FileResponse(open(tts_output_path, 'rb'), content_type='application/octet-stream')
-            # response['Content-Disposition'] = f'attachment; filename="output.mp3"'
-            response_data = {
-                'history_gpt': file_content
-            }
-
-            return Response(response_data, status=status.HTTP_200_OK)
+            response = FileResponse(open(tts_output_path, 'rb'), content_type='application/octet-stream')
+            response['Content-Disposition'] = f'attachment; filename="output.mp3"'
+            return response
         else:
             return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
