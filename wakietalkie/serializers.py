@@ -32,11 +32,3 @@ class AudioFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recording
         fields = ['recorded_audio_file', 'ai_partner_id', 'user_id','language']  # 오디오 파일만을 필드로 포함시킵니다.
-
-    # def create(self, validated_data):
-    #     ai_user_id = validated_data.pop('ai_user_id')
-    #     print(f"ai user id : {ai_user_id}")
-    #     ai_user = AI_User.objects.get(id=ai_user_id)
-    #     print(ai_user)
-    #     validated_data['ai_user_id'] = ai_user
-    #     return super().create(validated_data)

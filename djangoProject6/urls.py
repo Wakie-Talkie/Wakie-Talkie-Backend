@@ -20,7 +20,7 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
-from wakietalkie import views
+from wakietalkie import call_view
 from django.views.generic.base import RedirectView
 from django.urls import path
 
@@ -29,11 +29,11 @@ from wakietalkie.user_view import *
 from wakietalkie.vocab_view import *
 from wakietalkie.language_view import *
 from wakietalkie.recording_view import *
-from wakietalkie.views import *
+from wakietalkie.call_view import *
 
 from django.contrib import admin
 from django.urls import path, include
-from wakietalkie.views import *
+from wakietalkie.call_view import *
 from django.conf import settings
 from django.conf.urls.static import static
 

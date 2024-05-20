@@ -31,10 +31,10 @@ class Recording(models.Model):
     id = models.AutoField(primary_key=True)
     user_id = models.IntegerField()
     ai_partner_id = models.IntegerField()
-    date = models.DateTimeField(default=timezone.now)
+    date = models.CharField(max_length=20)
     calling_time = models.CharField(max_length=20)
-    converted_text_file = models.TextField()
-    recorded_audio_file = models.FileField(upload_to='recordings/')
+    converted_text_file = models.CharField(max_length=100)
+    recorded_audio_file = models.CharField(max_length=100)
     #caller = models.ForeignKey(User, related_name='call_records', on_delete=models.CASCADE)  # 전화를 건 사용자 정보
     language = models.IntegerField()
 
