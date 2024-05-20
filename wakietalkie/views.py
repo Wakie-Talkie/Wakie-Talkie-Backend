@@ -325,6 +325,42 @@ def sttgpttts(audio_file_path, ai_user_info):
     # 음성 결과와 GPT 대화 기록을 반환합니다.
     return tts_output_path, file_content
 
+class AudioFileUpload(APIView):
+    def post(self, request):
+        audio_file = request.data.get('recorded_audio_file')
+
+        ai_user_id = request.data.get('ai_user_id')
+        print(f"ai_user_id: {ai_user_id}")  # 디버깅 출력
+
+        try:
+            ai_user_info = AI_User.objects.get(id=ai_user_id)
+        except AI_User.DoesNotExist:
+            return Response({'error': 'AI_User matching the provided ID does not exist.'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        start_time = time.time()
+        original_path = audio_file.path
+        base, ext = os.path.splitext(original_path)
+        new_path = base + '.mp3'
+        os.rename(original_path,new_path)
+        print(new_path)
+        audio_file.name = new_path[len(settings.MEDIA_ROOT) + 1:]
+        #audio_file.save()
+        end_time = time.time()
+
+        # 걸린 시간 계산
+        elapsed_time = end_time - start_time
+        print(f"파일 post 받은 거 저장 작업에 걸린 시간: {elapsed_time} 초")
+        print(audio_file.name)
+        # audio_file = serializer.validated_data['recorded_audio_file']
+
+        # STT, GPT, TTS 처리
+        tts_output_path, file_content = sttgpttts(new_path, ai_user_info)
+        response = FileResponse(open(tts_output_path, 'rb'), content_type='application/octet-stream')
+        response['Content-Disposition'] = f'attachment; filename="output.mp3"'
+        return response
+    # else:
+    #     return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class AudioFileUpload(APIView):
     def post(self, request):
