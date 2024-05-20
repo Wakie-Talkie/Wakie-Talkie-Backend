@@ -79,7 +79,7 @@ urlpatterns = [
     path('vocab-lists/', VocabListView.as_view(), name='vocab-list'),
 
     #STT,GPT,TTS에 관한 엔드포인트
-    path('upload-audio/', AudioFileUploadNoDB.as_view(), name='audio_upload'),
+    path('upload-audio/', AudioFileUpload.as_view(), name='audio_upload'),
     path('stt/transcription/', TranscriptionRetrieve.as_view(), name='stt_transcription'),
     path('result/', SttGptTtsResponse.as_view(), name='stt_gpt_tts_response'),
     # TTS로 생성된 음성 데이터를 반환하는 엔드포인트
