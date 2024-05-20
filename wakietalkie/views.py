@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 
 from djangoProject6 import settings
+from djangoProject6.settings import MEDIA_URL
 from .models import *
 from .forms import *
 from rest_framework import generics
@@ -16,6 +17,7 @@ from django.http import HttpResponse, FileResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from . import serializers
+from datetime import datetime, date
 
 import os
 import tempfile
@@ -24,220 +26,15 @@ from django.core.files.storage import FileSystemStorage
 import time
 
 conversation_history = []
+store_url = ''
+conversation_index = 1
+recording_index = 1
 
 def handle_uploaded_file(uploaded_file: InMemoryUploadedFile):
     with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
         for chunk in uploaded_file.chunks():
             tmp_file.write(chunk)
         return tmp_file.name  # 임시 파일 경로 반환
-
-
-def index(request):
-    return HttpResponse("Welcome to my Django Project!")
-
-# Helper function to serialize list of objects
-def serialize_list(objects, serializer_class):
-    serializer = serializer_class(objects, many=True)
-    return serializer.data
-
-# Helper function to serialize single object
-def serialize_object(obj, serializer_class):
-    serializer = serializer_class(obj)
-    return serializer.data
-
-# User List and Create View
-class UserListCreateAPIView(APIView):
-    def get(self, request, format=None):
-        users = User.objects.all()
-        return Response(serialize_list(users, UserSerializer))
-
-    def post(self, request, format=None):
-        serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-# User Detail, Update and Delete View
-class UserDetailAPIView(APIView):
-    def get_object(self, pk):
-        return get_object_or_404(User, pk=pk)
-
-    def get(self, request, pk, format=None):
-        user = self.get_object(pk)
-        return Response(serialize_object(user, UserSerializer))
-
-    def put(self, request, pk, format=None):
-        user = self.get_object(pk)
-        serializer = UserSerializer(user, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk, format=None):
-        user = self.get_object(pk)
-        user.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-class LanguageListCreateAPIView(APIView):
-    def get(self, request, format=None):
-        languages = Language.objects.all()
-        return Response(serialize_list(languages, LanguageSerializer))
-    def post(self, request, format=None):
-        serializer = LanguageSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# AI User List and Create View
-class AIUserListCreateAPIView(APIView):
-    def get(self, request, format=None):
-        ai_users = AI_User.objects.all()
-        return Response(serialize_list(ai_users, AIUserSerializer))
-
-    def post(self, request, format=None):
-        serializer = AIUserSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-# AI User Detail, Update and Delete View
-class AIUserDetailAPIView(APIView):
-    def get_object(self, pk):
-        return get_object_or_404(AI_User, pk=pk)
-
-    def get(self, request, pk, format=None):
-        ai_user = self.get_object(pk)
-        return Response(serialize_object(ai_user, AIUserSerializer))
-
-    def put(self, request, pk, format=None):
-        ai_user = self.get_object(pk)
-        serializer = AIUserSerializer(ai_user, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk, format=None):
-        ai_user = self.get_object(pk)
-        ai_user.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-#Language로 ai-user list
-class AIUserListByLanguageAPIView(generics.ListAPIView):
-    serializer_class = AIUserSerializer
-
-    def get_queryset(self):
-        language_id = self.kwargs.get('language_id')  # URL에서 언어 ID를 가져옵니다.
-        if language_id is not None:
-            return AI_User.objects.filter(language_id=language_id)
-        else:
-            return AI_User.objects.all()
-
-# Recording List and Create View
-class RecordingListCreateAPIView(APIView):
-    def get(self, request, format=None):
-        recordings = Recording.objects.all()
-        return Response(serialize_list(recordings, RecordingSerializer))
-
-    def post(self, request, format=None):
-        serializer = RecordingSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-# Recording Detail, Update and Delete View
-class RecordingDetailAPIView(APIView):
-    def get_object(self, pk):
-        return get_object_or_404(Recording, pk=pk)
-
-    def get(self, request, pk, format=None):
-        recording = self.get_object(pk)
-        return Response(serialize_object(recording, RecordingSerializer))
-
-    def put(self, request, pk, format=None):
-        recording = self.get_object(pk)
-        serializer = RecordingSerializer(recording, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk, format=None):
-        recording = self.get_object(pk)
-        recording.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-# Recording List By User View
-class RecordingListByUserView(APIView):
-    def get(self, request, user_id, format=None):
-        recordings = Recording.objects.filter(user_id=user_id)
-        serializer = RecordingSerializer(recordings, many=True)
-        return Response(serializer.data)
-
-    def post(self, request, user_id, format=None):
-        request.data['user_id'] = user_id  # Ensure user_id is set before saving
-        serializer = RecordingSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-# VocabList List and Create View
-class VocabListListCreateAPIView(APIView):
-    def get(self, request, format=None):
-        vocab_lists = VocabList.objects.all()
-        return Response(serialize_list(vocab_lists, VocabListSerializer))
-
-    def post(self, request, format=None):
-        serializer = VocabListSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-# VocabList Detail, Update and Delete View
-class VocabListDetailAPIView(APIView):
-    def get_object(self, pk):
-        return get_object_or_404(VocabList, pk=pk)
-
-    def get(self, request, pk, format=None):
-        vocab_list = self.get_object(pk)
-        return Response(serialize_object(vocab_list, VocabListSerializer))
-
-    def put(self, request, pk, format=None):
-        vocab_list = self.get_object(pk)
-        serializer = VocabListSerializer(vocab_list, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk, format=None):
-        vocab_list = self.get_object(pk)
-        vocab_list.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-# Latest VocabList View
-class LatestVocabListView(APIView):
-    def get(self, request, format=None):
-        latest_vocab_list = VocabList.objects.latest('created_at')
-        serializer = VocabListSerializer(latest_vocab_list)
-        return Response(serializer.data)
-
-# VocabList View
-class VocabListView(APIView):
-    def get(self, request, format=None):
-        vocab_lists = VocabList.objects.all()
-        serializer = VocabListSerializer(vocab_lists, many=True)
-        return Response(serializer.data)
-
 
 #STT,GPT,TTS에 관한 view
 def sttgpttts(audio_file_path, ai_user_info):
@@ -315,6 +112,7 @@ def sttgpttts(audio_file_path, ai_user_info):
         print(f"tts 작업에 걸린 시간: {elapsed_time} 초")
         return file_path
 
+    print(f"history!!!!!!!:::: {conversation_history}")
     # 1. 음성 파일을 텍스트로 변환합니다.
     transcription = stt_function(audio_file_path)
     # 2. GPT를 사용하여 대화를 생성합니다.
@@ -325,11 +123,12 @@ def sttgpttts(audio_file_path, ai_user_info):
     # 음성 결과와 GPT 대화 기록을 반환합니다.
     return tts_output_path, file_content
 
-class AudioFileUpload(APIView):
+
+class AudioFileUploadNoDB(APIView):
     def post(self, request):
         audio_file = request.data.get('recorded_audio_file')
 
-        ai_user_id = request.data.get('ai_user_id')
+        ai_user_id = request.data.get('ai_partner_id')
         print(f"ai_user_id: {ai_user_id}")  # 디버깅 출력
 
         try:
@@ -339,19 +138,19 @@ class AudioFileUpload(APIView):
                             status=status.HTTP_404_NOT_FOUND)
 
         start_time = time.time()
-        original_path = audio_file.path
+        original_path = audio_file.recorded_audio_file.path
         base, ext = os.path.splitext(original_path)
         new_path = base + '.mp3'
         os.rename(original_path,new_path)
         print(new_path)
-        audio_file.name = new_path[len(settings.MEDIA_ROOT) + 1:]
-        #audio_file.save()
+        audio_file.recorded_audio_file.name = new_path[len(settings.MEDIA_ROOT) + 1:]
+        audio_file.save()
         end_time = time.time()
 
         # 걸린 시간 계산
         elapsed_time = end_time - start_time
         print(f"파일 post 받은 거 저장 작업에 걸린 시간: {elapsed_time} 초")
-        print(audio_file.name)
+        print(audio_file.recorded_audio_file.name)
         # audio_file = serializer.validated_data['recorded_audio_file']
 
         # STT, GPT, TTS 처리
@@ -359,8 +158,7 @@ class AudioFileUpload(APIView):
         response = FileResponse(open(tts_output_path, 'rb'), content_type='application/octet-stream')
         response['Content-Disposition'] = f'attachment; filename="output.mp3"'
         return response
-    # else:
-    #     return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class AudioFileUpload(APIView):
     def post(self, request):
@@ -442,17 +240,32 @@ class ConversationScriptAPIView(APIView):
         return Response({'conversation_script': script})
 
 #전화 시작과 끝
-from datetime import datetime
-
 def handle_call_start(start_time, ai_user_id):
     # 전화가 시작된 시간과 전화를 한 AI 사용자의 ID를 기록하여 데이터베이스에 저장합니다.
     CallRecord.objects.create(start_time=start_time, ai_user_id=ai_user_id)
 
+
+def resetRecordingSetting(ai_user_id, user_id):
+    global recording_index
+    global conversation_history
+    current_date = date.today()
+    # Format the date as a string in YYYY-mm-dd format
+    formatted_date = current_date.strftime('%Y-%m-%d')
+    store_url = str(user_id) + "/" + str(ai_user_id) + "/" + formatted_date + "/send_call" + str(recording_index)+"/"
+    recording_index += 1
+    dir = "audio-storage/recordings/" + store_url
+    os.makedirs(os.path.dirname(dir), exist_ok=True)
+
+    conversation_history.clear()
+    conversation_history.append({"role": "system", "content": "give me three or less short sentences"})
+    print(f"at call start! {conversation_history}")
+    return conversation_history
+
 class CallStartAPIView(APIView):
     def post(self, request):
-        conversation_history = []
+        history = resetRecordingSetting(request.data.get('ai_partner_id'), request.data.get('user_id'))
         response_data = {
-            'start_time': "conversation history reset"
+            'start_time': history
         }
         return Response(response_data, status=status.HTTP_200_OK)
 

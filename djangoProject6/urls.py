@@ -23,6 +23,12 @@ from django.urls import path, include
 from wakietalkie import views
 from django.views.generic.base import RedirectView
 from django.urls import path
+
+from wakietalkie.ai_view import *
+from wakietalkie.user_view import *
+from wakietalkie.vocab_view import *
+from wakietalkie.language_view import *
+from wakietalkie.recording_view import *
 from wakietalkie.views import *
 
 from django.contrib import admin
@@ -73,7 +79,7 @@ urlpatterns = [
     path('vocab-lists/', VocabListView.as_view(), name='vocab-list'),
 
     #STT,GPT,TTS에 관한 엔드포인트
-    path('upload-audio/', AudioFileUpload.as_view(), name='audio_upload'),
+    path('upload-audio/', AudioFileUploadNoDB.as_view(), name='audio_upload'),
     path('stt/transcription/', TranscriptionRetrieve.as_view(), name='stt_transcription'),
     path('result/', SttGptTtsResponse.as_view(), name='stt_gpt_tts_response'),
     # TTS로 생성된 음성 데이터를 반환하는 엔드포인트
