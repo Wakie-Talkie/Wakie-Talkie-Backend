@@ -38,6 +38,7 @@ def handle_uploaded_file(uploaded_file: InMemoryUploadedFile):
 
 #STT,GPT,TTS에 관한 view
 def sttgpttts(audio_file_path, ai_user_info):
+    global conversation_history
     OPENAI_API_KEY = "key"
 
     client = OpenAI(api_key=OPENAI_API_KEY)
@@ -54,6 +55,7 @@ def sttgpttts(audio_file_path, ai_user_info):
             elapsed_time = end_time - start_time
 
             print(f"stt 작업에 걸린 시간: {elapsed_time} 초")
+            print(f"stt response :::::; {transcription.text}")
         return transcription.text
 
     # GPT (대화를 생성하는 함수)
@@ -72,6 +74,7 @@ def sttgpttts(audio_file_path, ai_user_info):
         # 걸린 시간 계산
         elapsed_time = end_time - start_time
         print(f"gpt 작업에 걸린 시간: {elapsed_time} 초")
+        print(f"gpt response :::::; {response.choices[0].message.content}")
         conversation_history.append({"role": "assistant", "content": response.choices[0].message.content})
         # 대화 결과를 반환합니다.
         return response.choices[0].message.content, conversation_history
@@ -126,7 +129,11 @@ def sttgpttts(audio_file_path, ai_user_info):
 
 class AudioFileUploadNoDB(APIView):
     def post(self, request):
-        audio_file = request.data.get('recorded_audio_file')
+        global store_url
+        print(f"stored url! {store_url}")
+        global conversation_index
+        print(conversation_index)
+        audio_file = request.FILES['recorded_audio_file']
 
         ai_user_id = request.data.get('ai_partner_id')
         print(f"ai_user_id: {ai_user_id}")  # 디버깅 출력
@@ -138,25 +145,31 @@ class AudioFileUploadNoDB(APIView):
                             status=status.HTTP_404_NOT_FOUND)
 
         start_time = time.time()
-        original_path = audio_file.recorded_audio_file.path
-        base, ext = os.path.splitext(original_path)
-        new_path = base + '.mp3'
-        os.rename(original_path,new_path)
-        print(new_path)
-        audio_file.recorded_audio_file.name = new_path[len(settings.MEDIA_ROOT) + 1:]
-        audio_file.save()
+        # original_path = audio_file.path
+        # base, ext = os.path.splitext(original_path)
+        # new_path = base + '.mp3'
+        # os.rename(original_path,new_path)
+        # print(new_path)
+        # audio_file.name = new_path[len(settings.MEDIA_ROOT) + 1:]
+        file_name = "user" + str(conversation_index) + ".mp3"
+        audio_file_path = os.path.join(store_url, file_name)
+        with open(audio_file_path, 'wb+') as destination:
+            for chunk in audio_file.chunks():
+                destination.write(chunk)
+
         end_time = time.time()
 
         # 걸린 시간 계산
         elapsed_time = end_time - start_time
         print(f"파일 post 받은 거 저장 작업에 걸린 시간: {elapsed_time} 초")
-        print(audio_file.recorded_audio_file.name)
+        print(destination.name)
         # audio_file = serializer.validated_data['recorded_audio_file']
 
         # STT, GPT, TTS 처리
-        tts_output_path, file_content = sttgpttts(new_path, ai_user_info)
+        tts_output_path, file_content = sttgpttts(audio_file_path, ai_user_info)
         response = FileResponse(open(tts_output_path, 'rb'), content_type='application/octet-stream')
         response['Content-Disposition'] = f'attachment; filename="output.mp3"'
+        return response
         return response
 
 
@@ -248,13 +261,15 @@ def handle_call_start(start_time, ai_user_id):
 def resetRecordingSetting(ai_user_id, user_id):
     global recording_index
     global conversation_history
+    global store_url
     current_date = date.today()
     # Format the date as a string in YYYY-mm-dd format
     formatted_date = current_date.strftime('%Y-%m-%d')
-    store_url = str(user_id) + "/" + str(ai_user_id) + "/" + formatted_date + "/send_call" + str(recording_index)+"/"
+    store_url = "audio-storage/recordings/" + str(user_id) + "/" + str(ai_user_id) + "/" + formatted_date + "/send_call" + str(recording_index)+"/"
     recording_index += 1
-    dir = "audio-storage/recordings/" + store_url
-    os.makedirs(os.path.dirname(dir), exist_ok=True)
+    print(f"recording index : {recording_index}")
+
+    os.makedirs(os.path.dirname(store_url), exist_ok=True)
 
     conversation_history.clear()
     conversation_history.append({"role": "system", "content": "give me three or less short sentences"})
