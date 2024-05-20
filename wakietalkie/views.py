@@ -38,7 +38,6 @@ def handle_uploaded_file(uploaded_file: InMemoryUploadedFile):
 
 #STT,GPT,TTS에 관한 view
 def sttgpttts(audio_file_path, ai_user_info):
-    global conversation_history
     OPENAI_API_KEY = "key"
 
     client = OpenAI(api_key=OPENAI_API_KEY)
@@ -60,6 +59,7 @@ def sttgpttts(audio_file_path, ai_user_info):
 
     # GPT (대화를 생성하는 함수)
     def gpt_function(text):
+        global conversation_history
         # OpenAI 클라이언트 초기화
         # client = OpenAI(api_key=OPENAI_API_KEY)
         # 이전 대화 내용과 사용자의 설명을 포함하여 대화를 생성하는 요청을 보냅니다.
@@ -81,6 +81,7 @@ def sttgpttts(audio_file_path, ai_user_info):
 
     # TTS (텍스트를 음성으로 변환하는 함수)
     def tts_function(text, voice):
+        global conversation_index
         # 음성 생성 요청을 보냅니다.
         start_time = time.time()
         response = client.audio.speech.create(
@@ -97,10 +98,11 @@ def sttgpttts(audio_file_path, ai_user_info):
         # 생성된 음성을 반환합니다.
         #return response.choices[0].message.content
         start_time = time.time()
-        media_root = settings.MEDIA_ROOT
-        file_name = "output_audio.mp3"
+        file_name = "ai" + str(conversation_index) + ".mp3"
+        conversation_index+=1
+
         # 파일의 전체 경로를 생성합니다.
-        file_path = os.path.join(media_root, file_name)
+        file_path = os.path.join(store_url, file_name)
 
         # FileSystemStorage 인스턴스를 생성합니다.
         # fs = FileSystemStorage(location=media_root)
@@ -162,14 +164,13 @@ class AudioFileUploadNoDB(APIView):
         # 걸린 시간 계산
         elapsed_time = end_time - start_time
         print(f"파일 post 받은 거 저장 작업에 걸린 시간: {elapsed_time} 초")
-        print(destination.name)
+
         # audio_file = serializer.validated_data['recorded_audio_file']
 
         # STT, GPT, TTS 처리
         tts_output_path, file_content = sttgpttts(audio_file_path, ai_user_info)
         response = FileResponse(open(tts_output_path, 'rb'), content_type='application/octet-stream')
         response['Content-Disposition'] = f'attachment; filename="output.mp3"'
-        return response
         return response
 
 
