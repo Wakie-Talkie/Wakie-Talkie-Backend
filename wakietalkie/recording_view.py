@@ -1,3 +1,6 @@
+import os
+
+from django.http import FileResponse, Http404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -29,6 +32,37 @@ class RecordingListCreateAPIView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class RecordingGetRecordAPIView(APIView):
+    def get_object(self, pk):
+        return get_object_or_404(Recording, pk=pk)
+
+    def get(self, request, pk):
+        recording = self.get_object(pk)
+        file_path = recording.recorded_audio_file
+        # Check if the file exists
+        if not os.path.exists(file_path):
+            raise Http404("File not found")
+
+        # Serve the file
+        response = FileResponse(open(file_path, 'rb'), content_type='application/octet-stream')
+        response['Content-Disposition'] = f'attachment; filepath="combined_recording.mp3"'
+        return response
+class RecordingGetTextAPIView(APIView):
+    def get_object(self, pk):
+        return get_object_or_404(Recording, pk=pk)
+
+    def get(self, request, pk):
+        recording = self.get_object(pk)
+        file_path = recording.converted_text_file
+        # Check if the file exists
+        if not os.path.exists(file_path):
+            raise Http404("File not found")
+
+        # Serve the file
+        response = FileResponse(open(file_path, 'rb'), content_type='text/plain')
+        response['Content-Disposition'] = f'attachment; filepath="combined_recording.txt"'
+        return response
 
 # Recording Detail, Update and Delete View
 class RecordingDetailAPIView(APIView):

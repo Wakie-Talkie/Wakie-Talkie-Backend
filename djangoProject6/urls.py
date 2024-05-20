@@ -68,7 +68,8 @@ urlpatterns = [
     path('recordings/update/<int:pk>/', RecordingDetailAPIView.as_view(), name='recording-update'),
     path('recordings/delete/<int:pk>/', RecordingDetailAPIView.as_view(), name='recording-delete'),
     path('recordings/user/<int:user_id>/', RecordingListByUserView.as_view(), name='recording-list-by-user'),
-
+    path('recordings/text/<int:pk>', RecordingGetTextAPIView.as_view(), name='recording-text-file'),
+    path('recordings/record/<int:pk>', RecordingGetRecordAPIView.as_view(), name='recording-record-file'),
     # VocabList API endpoints
     path('vocab-lists/', VocabListListCreateAPIView.as_view(), name='vocab-list-list'),
     path('vocab-lists/<int:pk>/', VocabListDetailAPIView.as_view(), name='vocab-list-detail'),
