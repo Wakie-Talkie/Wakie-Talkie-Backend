@@ -76,7 +76,7 @@ urlpatterns = [
     path('vocab-lists/create/', VocabListListCreateAPIView.as_view(), name='vocab-list-create'),
     path('vocab-lists/update/<int:pk>/', VocabListDetailAPIView.as_view(), name='vocab-list-update'),
     path('vocab-lists/delete/<int:pk>/', VocabListDetailAPIView.as_view(), name='vocab-list-delete'),
-    path('vocab-lists/latest/', LatestVocabListView.as_view(), name='latest-vocab-list'),
+    path('vocab-lists/recent/<int:user_id>/', MostRecentVocabListView.as_view(), name='recent-vocab-list'),
     path('vocab-lists/', VocabListView.as_view(), name='vocab-list'),
 
     #STT,GPT,TTS에 관한 엔드포인트

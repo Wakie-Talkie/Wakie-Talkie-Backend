@@ -53,6 +53,15 @@ class VocabListDetailAPIView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 # Latest VocabList View
+
+class MostRecentVocabListView(APIView):
+    def get(self, request, user_id):
+        latest_vocab_list = VocabList.objects.filter(user_id=user_id).order_by('-id').first()
+        if latest_vocab_list:
+            serializer = VocabListSerializer(latest_vocab_list)
+            return Response(serializer.data)
+        else:
+            return Response("no vocab list created yet!", status=status.HTTP_204_NO_CONTENT)
 class LatestVocabListView(APIView):
     def get(self, request, format=None):
         latest_vocab_list = VocabList.objects.latest('created_at')

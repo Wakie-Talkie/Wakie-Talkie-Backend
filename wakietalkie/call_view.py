@@ -154,6 +154,7 @@ def resetRecordingSetting(ai_user_id, user_id):
     current_date = date.today()
     # Format the date as a string in YYYY-mm-dd format
     formatted_date = current_date.strftime('%Y-%m-%d')
+    print(f"data?? {formatted_date}")
     store_url = "audio-storage/recordings/" + str(user_id) + "/" + str(ai_user_id) + "/" + formatted_date + "/send_call" + str(recording_index)+"/"
     # print(f"recording index : {recording_index}")
 
@@ -269,6 +270,7 @@ class CallEndAPIView(APIView):
             vocab = {
                 'user_id': recording_model.user_id,
                 'recording_id': recording_model.id,
+                'date' : formatted_date,
                 'word_list': vocab_data
             }
             print(vocab)

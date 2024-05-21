@@ -26,6 +26,7 @@ class VocabListSerializer(serializers.ModelSerializer):
         model = VocabList
         fields = '__all__'
 
+
 class AudioFileSerializer(serializers.ModelSerializer):
     # ai_user_id = serializers.IntegerField()
 

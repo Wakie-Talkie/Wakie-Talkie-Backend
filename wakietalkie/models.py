@@ -46,6 +46,7 @@ class VocabList(models.Model):
     id = models.AutoField(primary_key=True)
     user_id = models.IntegerField()
     recording_id = models.IntegerField()
+    date = models.CharField(max_length=20)
     word_list = models.JSONField()  # JSON 형식의 필드로 사용자 단어 리스트를 저장
 
     def __str__(self):
