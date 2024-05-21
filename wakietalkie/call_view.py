@@ -32,6 +32,24 @@ store_url = ''
 conversation_index = 1
 recording_index = 1
 
+def createVocabs(vocab_history_path):
+    OPENAI_API_KEY = "key"
+
+    client = OpenAI(api_key=OPENAI_API_KEY)
+    with open(vocab_history_path, 'r', encoding='utf-8') as file:
+        file_contents = file.read()
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system",
+             "content": "give me five json format output only in {'word':'english word','korean meaning':'korean meaning of the englis word','antonym':'antonym of the english word','synonym':'synonym of the english word','sentence':'example sentence using the english word'} format that is useful in daily conversation from the incoming text"},
+            {"role": "user",
+             "content": file_contents}
+        ],
+    )
+    print(response.choices[0].message.content)
+    return response.choices[0].message.content
+
 def sttgpttts(audio_file_path, ai_user_info):
     OPENAI_API_KEY = "key"
 
@@ -203,10 +221,10 @@ def mergeRecordings():
             file.write("\n")  # Add a blank line between entries
 
     text_file_name = "vocab_history.txt"
-    text_output_path = os.path.join(store_url, text_file_name)
+    vocab_text_path = os.path.join(store_url, text_file_name)
     flag = False
 
-    with open(text_output_path, 'w') as file:
+    with open(vocab_text_path, 'w') as file:
         for history in conversation_history:
             for key, value in history.items():
                 if flag:
@@ -219,16 +237,17 @@ def mergeRecordings():
     # initialize index
     recording_index += 1
     conversation_index = 1
-    return audio_output_path, text_output_path
+    return audio_output_path, text_output_path, vocab_text_path
 class CallEndAPIView(APIView):
     def post(self, request):
-        audio_path, text_path = mergeRecordings()
-
+        audio_path, text_path, vocab_path = mergeRecordings()
+        vocab_data = createVocabs(vocab_path)
         data = request.data.copy()
         data['converted_text_file'] = text_path
         data['recorded_audio_file'] = audio_path
 
         ai_user_id = request.data.get('ai_partner_id')
+
         try:
             ai_user_info = AI_User.objects.get(id=ai_user_id)
             data['language'] = ai_user_info.language.id
@@ -242,11 +261,26 @@ class CallEndAPIView(APIView):
 
         data['calling_time'] = get_audio_runtime(audio_path)
 
+        os.remove(vocab_path)
+
         recording_serializer = RecordingSerializer(data=data)
         if recording_serializer.is_valid():
-            recording_serializer.save()
+            recording_model = recording_serializer.save()
+            vocab = {
+                'user_id': recording_model.user_id,
+                'recording_id': recording_model.id,
+                'word_list': vocab_data
+            }
+            print(vocab)
+            vocab_serializer = VocabListSerializer(data=vocab)
+            if vocab_serializer.is_valid():
+                vocab_serializer.save()
+                return Response(vocab_serializer.data, status=status.HTTP_201_CREATED)
             return Response(recording_serializer.data, status=status.HTTP_201_CREATED)
         return Response(recording_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 # 통화 정보 및 대화 내용에 접근 가능한 API
 class CallInfoAPIView(APIView):
     def post(self, request):
