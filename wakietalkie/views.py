@@ -268,7 +268,7 @@ class VocabListView(APIView):
 #STT, GPT, TTS, 처리 함수
 # STT, GPT, TTS 기능을 구현한 함수
 def sttgpttts(audio_file_path, ai_user_info, gpt_history):
-    OPENAI_API_KEY = "yourkey"
+    OPENAI_API_KEY = "key"
 
     client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -300,11 +300,37 @@ def sttgpttts(audio_file_path, ai_user_info, gpt_history):
 
     # 1. 음성 파일을 텍스트로 변환
     transcription = stt_function(audio_file_path)
+    print("STT 완료: ", transcription)
     # 2. GPT를 사용하여 대화 생성
     gpt_output, gpt_history = gpt_function(transcription, gpt_history)
+    print("GPT 완료: ", gpt_output)
     # 3. 생성된 대화를 문장 단위로 나누기
     sentences = gpt_output.split('.')
+    print("문장 분할 완료: ", sentences)
     return sentences, gpt_history, tts_function
+
+def save_and_measure_tts(sentences, tts_function):
+    total_size = 0
+    for sentence in sentences:
+        if sentence.strip():
+            print("TTS 변환 시작: ", sentence.strip())
+            tts_response = tts_function(sentence.strip() + '.')
+            print("TTS 변환 완료: ", sentence.strip())
+            total_size += len(tts_response.content)
+            # Save the TTS output to a file
+            with open(f"tts_output_{sentence[:10].strip()}.mp3", "wb") as f:
+                f.write(tts_response.content)
+    return total_size
+
+def measure_stream_tts(sentences, tts_function):
+    total_size = 0
+    for sentence in sentences:
+        if sentence.strip():
+            print("TTS 변환 시작: ", sentence.strip())
+            tts_response = tts_function(sentence.strip() + '.')
+            print("TTS 변환 완료: ", sentence.strip())
+            total_size += len(tts_response.content)
+    return total_size
 
 class AudioFileUpload(APIView):
     def post(self, request):
@@ -339,11 +365,21 @@ class AudioFileUpload(APIView):
             # STT, GPT, TTS 처리
             sentences, gpt_history, tts_function = sttgpttts(new_path, ai_user_info, [])
 
+            # Save TTS to files and measure total size
+            saved_total_size = save_and_measure_tts(sentences, tts_function)
+            print("파일로 저장된 TTS 총 크기: ", saved_total_size)
+
+            # Measure TTS total size in stream
+            stream_total_size = measure_stream_tts(sentences, tts_function)
+            print("스트림된 TTS 총 크기: ", stream_total_size)
+
             # 생성된 음성 파일을 순차적으로 스트리밍하는 함수
             def generate():
                 for sentence in sentences:
                     if sentence.strip():
+                        print("TTS 변환 시작: ", sentence.strip())
                         tts_response = tts_function(sentence.strip() + '.')
+                        print("TTS 변환 완료: ", sentence.strip())
                         yield tts_response.content
 
             response = StreamingHttpResponse(generate(), content_type='audio/mpeg')
