@@ -202,6 +202,20 @@ def mergeRecordings():
                 file.write(f"{key}: {value}\n")
             file.write("\n")  # Add a blank line between entries
 
+    text_file_name = "vocab_history.txt"
+    text_output_path = os.path.join(store_url, text_file_name)
+    flag = False
+
+    with open(text_output_path, 'w') as file:
+        for history in conversation_history:
+            for key, value in history.items():
+                if flag:
+                    file.write(f"{value} ")
+                if value == "assistant":
+                    flag =True
+                else:
+                    flag = False
+
     # initialize index
     recording_index += 1
     conversation_index = 1

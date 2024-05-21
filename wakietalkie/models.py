@@ -44,8 +44,8 @@ class Recording(models.Model):
 # 단어장
 class VocabList(models.Model):
     id = models.AutoField(primary_key=True)
-    user_id = models.ForeignKey(User, on_delete=models.CASCADE)  # User 모델을 ForeignKey로 참조
-    recording_id = models.ForeignKey(Recording, on_delete=models.CASCADE)  # Recording 모델을 ForeignKey로 참조
+    user_id = models.IntegerField()
+    recording_id = models.IntegerField()
     word_list = models.JSONField()  # JSON 형식의 필드로 사용자 단어 리스트를 저장
 
     def __str__(self):
