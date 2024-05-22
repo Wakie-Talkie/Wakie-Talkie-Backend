@@ -42,12 +42,12 @@ def createVocabs(vocab_history_path):
         model="gpt-4o",
         messages=[
             {"role": "system",
-             "content": "give me five json format output only in {'word':'english word','korean meaning':'korean meaning of the englis word','antonym':'antonym of the english word','synonym':'synonym of the english word','sentence':'example sentence using the english word'} format that is useful in daily conversation from the incoming text"},
+             "content": "give me five json list format output only in [{'word':'english word1','korean meaning':'korean meaning of the englis word1','antonym':'antonym of the english word1','synonym':'synonym of the english word1','sentence':'example sentence using the english word1'}{'word':'english word2','korean meaning':'korean meaning of the englis word2','antonym':'antonym of the english word2','synonym':'synonym of the english word2','sentence':'example sentence using the english word2'}...] format that is useful in daily conversation from the incoming text"},
             {"role": "user",
              "content": file_contents}
         ],
     )
-    print(response.choices[0].message.content)
+    # print(response.choices[0].message.content)
     return response.choices[0].message.content
 
 def sttgpttts(audio_file_path, ai_user_info):
@@ -154,7 +154,7 @@ def resetRecordingSetting(ai_user_id, user_id):
     current_date = date.today()
     # Format the date as a string in YYYY-mm-dd format
     formatted_date = current_date.strftime('%Y-%m-%d')
-    print(f"data?? {formatted_date}")
+    # print(f"data?? {formatted_date}")
     store_url = "audio-storage/recordings/" + str(user_id) + "/" + str(ai_user_id) + "/" + formatted_date + "/send_call" + str(recording_index)+"/"
     # print(f"recording index : {recording_index}")
 
@@ -273,7 +273,7 @@ class CallEndAPIView(APIView):
                 'date' : formatted_date,
                 'word_list': vocab_data
             }
-            print(vocab)
+            # print(vocab)
             vocab_serializer = VocabListSerializer(data=vocab)
             if vocab_serializer.is_valid():
                 vocab_serializer.save()
