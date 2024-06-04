@@ -42,7 +42,7 @@ def createVocabs(vocab_history_path):
         model="gpt-4o",
         messages=[
             {"role": "system",
-             "content": "give me five json list format output only in [{'word':'english word1','korean meaning':'korean meaning of the englis word1','antonym':'antonym of the english word1','synonym':'synonym of the english word1','sentence':'example sentence using the english word1'}{'word':'english word2','korean meaning':'korean meaning of the englis word2','antonym':'antonym of the english word2','synonym':'synonym of the english word2','sentence':'example sentence using the english word2'}...] format that is useful in daily conversation from the incoming text"},
+             "content": "give me five json list format output only in [{'word':'word1 from the conversation','korean meaning':'korean meaning of the word1','antonym':'antonym of the word1','synonym':'synonym of the word1','sentence':'example sentence using the word1'}{'word':'word2 from the conversation','korean meaning':'korean meaning of the word2','antonym':'antonym of the word2','synonym':'synonym of the word2','sentence':'example sentence using the word2'}...] format that is useful in daily conversation from the incoming text"},
             {"role": "user",
              "content": file_contents}
         ],
@@ -55,16 +55,17 @@ def sttgpttts(audio_file_path, ai_user_info):
 
     client = OpenAI(api_key=OPENAI_API_KEY)
     # STT (음성을 텍스트로 변환하는 함수)
-    def stt_function(audio_file_path):
+    def stt_function(audio_file_path, language):
         # 오디오 파일을 열어서 텍스트로 변환하는 요청을 보냅니다.
         start_time = time.time()
         with open(audio_file_path, "rb") as audio_file:
-            transcription = client.audio.transcriptions.create(file=audio_file, model="whisper-1")
+            transcription = client.audio.transcriptions.create(file=audio_file, model="whisper-1", language = language)
             end_time = time.time()
             # 걸린 시간 계산
             elapsed_time = end_time - start_time
 
             print(f"stt 작업에 걸린 시간: {elapsed_time} 초")
+            print(transcription.text)
         return transcription.text
 
     # GPT (대화를 생성하는 함수)
@@ -81,6 +82,7 @@ def sttgpttts(audio_file_path, ai_user_info):
         elapsed_time = end_time - start_time
         print(f"gpt 작업에 걸린 시간: {elapsed_time} 초")
         conversation_history.append({"role": "assistant", "content": response.choices[0].message.content})
+        print(response.choices[0].message.content)
         # 대화 결과를 반환합니다.
         return response.choices[0].message.content, conversation_history
 
@@ -114,7 +116,7 @@ def sttgpttts(audio_file_path, ai_user_info):
         elapsed_time = end_time - start_time
         print(f"tts 작업에 걸린 시간: {elapsed_time} 초")
         return file_path
-    transcription = stt_function(audio_file_path)
+    transcription = stt_function(audio_file_path, ai_user_info.language)
     gpt_output, file_content = gpt_function(transcription)
     tts_output_path = tts_function(gpt_output, ai_user_info.nickname)  # 사용자의 언어로 설정
     return tts_output_path, file_content
@@ -127,6 +129,10 @@ class AudioFileUpload(APIView):
 
         try:
             ai_user_info = AI_User.objects.get(id=ai_user_id)
+            print(ai_user_info.nickname)
+            print(ai_user_info.language)
+            # language_info = Language.objects.get(id=ai_user_info.language)
+            # print(language_info)
         except AI_User.DoesNotExist:
             return Response({'error': 'AI_User matching the provided ID does not exist.'},
                             status=status.HTTP_404_NOT_FOUND)
