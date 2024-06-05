@@ -53,6 +53,7 @@ urlpatterns = [
 
     #language API
     path('languages/', LanguageListCreateAPIView.as_view(), name='language-list'),
+    path('languages/delete/<int:pk>/', LanguageDetailAPIView.as_view(), name='language-delete'),
 
     # AI User API endpoints
     path('ai-users/', AIUserListCreateAPIView.as_view(), name='ai-user-list'),
