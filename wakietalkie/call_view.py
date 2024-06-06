@@ -42,7 +42,7 @@ def createVocabs(vocab_history_path):
         model="gpt-4o",
         messages=[
             {"role": "system",
-             "content": "give me five json list format output only in [{'word':'word1 from the conversation','korean meaning':'korean meaning of the word1','antonym':'antonym of the word1','synonym':'synonym of the word1','sentence':'example sentence using the word1'}{'word':'word2 from the conversation','korean meaning':'korean meaning of the word2','antonym':'antonym of the word2','synonym':'synonym of the word2','sentence':'example sentence using the word2'}...] format that is useful in daily conversation from the incoming text"},
+             "content": "give me five json list format output only in [{\"word\":\"word1 from the conversation\",\"korean meaning\":\"korean meaning of the word1\",\"antonym\":\"antonym of the word1\",\"synonym\":\"synonym of the word1\",\"sentence\":\"example sentence using the word1\"},{\"word':'word2 from the conversation\",\"korean meaning\":\"korean meaning of the word2\",\"antonym\":\"antonym of the word2\",\"synonym\":\"synonym of the word2\",\"sentence\":\"example sentence using the word2\"},...] format that is useful in daily conversation from the incoming text"},
             {"role": "user",
              "content": file_contents}
         ],
