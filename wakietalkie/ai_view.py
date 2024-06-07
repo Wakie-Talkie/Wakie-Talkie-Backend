@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import generics
-
+import requests
 from .serializers import *
 
 from wakietalkie.models import AI_User
@@ -33,6 +33,20 @@ class AIUserListCreateAPIView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AIVoiceTransfer(APIView):
+    def post(self, request, format=None):
+        file = request.FILES['ai_voice_file']
+        if not file:
+            return Response({'error': 'no file'},status=status.HTTP_400_BAD_REQUEST)
+        files = {'file': (file.name, file.read(), file.content_type)}
+        response = requests.post('http://localhost:5001/upload-ai-voice/', files=files)
+        if response.status_code == 200:
+            return Response(response.json(), status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Failed to upload audio'}, status=response.status_code)
+
 
 # AI User Detail, Update and Delete View
 class AIUserDetailAPIView(APIView):
@@ -66,3 +80,4 @@ class AIUserListByLanguageAPIView(generics.ListAPIView):
             return AI_User.objects.filter(language_id=language_id)
         else:
             return AI_User.objects.all()
+
