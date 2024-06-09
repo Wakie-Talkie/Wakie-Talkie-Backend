@@ -10,6 +10,7 @@ from openai import OpenAI
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+import requests
 from django.http import JsonResponse
 from django.views.generic import CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
@@ -19,13 +20,10 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from . import serializers
 from datetime import datetime, date
 
-import wave
 import os
-import tempfile
 from mutagen import File
-from django.core.files.uploadedfile import InMemoryUploadedFile
-from django.core.files.storage import FileSystemStorage
 import time
+
 
 conversation_history = []
 store_url = ''
@@ -59,7 +57,7 @@ def sttgpttts(audio_file_path, ai_user_info):
         # 오디오 파일을 열어서 텍스트로 변환하는 요청을 보냅니다.
         start_time = time.time()
         with open(audio_file_path, "rb") as audio_file:
-            transcription = client.audio.transcriptions.create(file=audio_file, model="whisper-1", language = language)
+            transcription = client.audio.transcriptions.create(file=audio_file, model="whisper-1", language=language)
             end_time = time.time()
             # 걸린 시간 계산
             elapsed_time = end_time - start_time
@@ -116,10 +114,56 @@ def sttgpttts(audio_file_path, ai_user_info):
         elapsed_time = end_time - start_time
         print(f"tts 작업에 걸린 시간: {elapsed_time} 초")
         return file_path
+
+    def custom_tts_function(text, voice, language):
+        global conversation_index
+        # 음성 생성 요청을 보냅니다.
+        start_time = time.time()
+        response = requests.post(
+           'http://127.0.0.1:5001/tts/',
+           json={'voice': voice, 'language': language.name, 'text': text}
+        )
+        if response.status_code == 200:
+            audio_data = response.content
+            end_time = time.time()
+
+            # 걸린 시간 계산
+            elapsed_time = end_time - start_time
+            print(f"tts api 작업에 걸린 시간: {elapsed_time} 초")
+            start_time = time.time()
+            file_name = "ai" + str(conversation_index) + ".mp3"
+            conversation_index += 1
+
+            # 파일의 전체 경로를 생성합니다.
+            file_path = os.path.join(store_url, file_name)
+
+            with open(file_path, 'wb') as audio_file:
+                audio_file.write(audio_data)
+
+            # 끝나는 시간 기록
+            end_time = time.time()
+
+            # 걸린 시간 계산
+            elapsed_time = end_time - start_time
+            print(f"tts 작업에 걸린 시간: {elapsed_time} 초")
+
+            return file_path
+        else:
+            return Response({'error': 'Failed to generate speech'}, status.resopnse_code)
+
     transcription = stt_function(audio_file_path, ai_user_info.language)
+    print(f"language : {ai_user_info.language}\n")
+    print(f"lang type: {type(ai_user_info.language)}")
+    print(f"nick type: {type(ai_user_info.language)}")
     gpt_output, file_content = gpt_function(transcription)
-    tts_output_path = tts_function(gpt_output, ai_user_info.nickname)  # 사용자의 언어로 설정
-    return tts_output_path, file_content
+    print(f"type?? : {ai_user_info.ai_type}\n")
+    if ai_user_info.ai_type == "openai":
+        tts_output_path = tts_function(gpt_output, ai_user_info.nickname)
+        return tts_output_path, file_content
+    else:
+        tts_output_path = custom_tts_function(gpt_output, ai_user_info.nickname, ai_user_info.language)
+        return tts_output_path, file_content
+
 class AudioFileUpload(APIView):
     def post(self, request):
         global store_url
@@ -131,6 +175,8 @@ class AudioFileUpload(APIView):
             ai_user_info = AI_User.objects.get(id=ai_user_id)
             print(ai_user_info.nickname)
             print(ai_user_info.language)
+
+            print(ai_user_info.ai_type)
             # language_info = Language.objects.get(id=ai_user_info.language)
             # print(language_info)
         except AI_User.DoesNotExist:
@@ -162,6 +208,7 @@ def resetRecordingSetting(ai_user_id, user_id):
     formatted_date = current_date.strftime('%Y-%m-%d')
     # print(f"data?? {formatted_date}")
     store_url = "audio-storage/recordings/" + str(user_id) + "/" + str(ai_user_id) + "/" + formatted_date + "/send_call" + str(recording_index)+"/"
+    print(f"store url : {store_url}\n")
     # print(f"recording index : {recording_index}")
 
     os.makedirs(os.path.dirname(store_url), exist_ok=True)

@@ -41,7 +41,7 @@ class AIVoiceTransfer(APIView):
         if not file:
             return Response({'error': 'no file'},status=status.HTTP_400_BAD_REQUEST)
         files = {'file': (file.name, file.read(), file.content_type)}
-        response = requests.post('http://localhost:5001/upload-ai-voice/', files=files)
+        response = requests.post('http://127.0.0.1:5001/upload-ai-voice/', files=files)
         if response.status_code == 200:
             return Response(response.json(), status=status.HTTP_200_OK)
         else:
