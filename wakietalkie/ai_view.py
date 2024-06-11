@@ -83,3 +83,15 @@ class AIUserListByLanguageAPIView(generics.ListAPIView):
         else:
             return AI_User.objects.all()
 
+
+#ai_user_img 받아오기
+class AIUserImageView(APIView):
+    def get(self, request, ai_id, format=None):
+        try:
+            ai_user = AI_User.objects.get(id=ai_id)
+            if ai_user.profile_img:
+                return Response({'profile_img': ai_user.profile_img.url}, status=status.HTTP_200_OK)
+            else:
+                return Response({'error': 'No profile image found for this user'}, status=status.HTTP_404_NOT_FOUND)
+        except AI_User.DoesNotExist:
+            return Response({'error': 'AI user not found'}, status=status.HTTP_404_NOT_FOUND)

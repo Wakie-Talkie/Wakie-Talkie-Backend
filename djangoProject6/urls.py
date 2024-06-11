@@ -63,6 +63,7 @@ urlpatterns = [
     path('ai-users/delete/<int:pk>/', AIUserDetailAPIView.as_view(), name='ai-user-delete'),
     path('ai-users/language/<int:language_id>/', AIUserListByLanguageAPIView.as_view(), name='ai-user-list-by-language'),
     path('ai-users/upload-ai-voice/', AIVoiceTransfer.as_view(),name='upload-ai-voice'),
+    path('ai-user-image/<int:ai_id>/', AIUserImageView.as_view(), name='ai_user_image'),
 
     # Recording API endpoints
     path('recordings/', RecordingListCreateAPIView.as_view(), name='recording-list'),
