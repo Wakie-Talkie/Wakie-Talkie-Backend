@@ -119,6 +119,7 @@ def sttgpttts(audio_file_path, ai_user_info):
         global conversation_index
         # 음성 생성 요청을 보냅니다.
         start_time = time.time()
+        print(f"voice {voice}, language {language} text {text}")
         response = requests.post(
            'http://127.0.0.1:5001/tts/',
            json={'voice': voice, 'language': language.name, 'text': text}
