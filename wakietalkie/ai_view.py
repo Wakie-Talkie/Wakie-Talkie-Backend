@@ -84,7 +84,7 @@ class AIUserListByLanguageAPIView(generics.ListAPIView):
             return AI_User.objects.all()
 
 
-#ai_user_img 받아오기
+#ai_user_img 받아오기 - git아이디 변경을 위한 메세지
 class AIUserImageView(APIView):
     def get(self, request, ai_id, format=None):
         try:
