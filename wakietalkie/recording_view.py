@@ -46,7 +46,7 @@ class RecordingGetRecordAPIView(APIView):
 
         # Serve the file
         response = FileResponse(open(file_path, 'rb'), content_type='application/octet-stream')
-        response['Content-Disposition'] = f'attachment; filepath="combined_recording.mp3"'
+        response['Content-Disposition'] = f'attachment; filepath="combined_recording.wav"'
         return response
 class RecordingGetTextAPIView(APIView):
     def get_object(self, pk):

@@ -23,6 +23,7 @@ from datetime import datetime, date
 import os
 from mutagen import File
 import time
+from pydub import AudioSegment
 
 
 conversation_history = []
@@ -100,20 +101,27 @@ def sttgpttts(audio_file_path, ai_user_info):
         elapsed_time = end_time - start_time
         print(f"tts api 작업에 걸린 시간: {elapsed_time} 초")
         start_time = time.time()
-        file_name = "ai" + str(conversation_index) + ".mp3"
+        file_name = f"ai{conversation_index}.mp3"
+        wav_file_name=f"ai{conversation_index}.wav"
         conversation_index+=1
 
         # 파일의 전체 경로를 생성합니다.
         file_path = os.path.join(store_url, file_name)
         response.stream_to_file(file_path)
 
+        sound = AudioSegment.from_mp3(file_path)
+        wav_file_path = os.path.join(store_url, wav_file_name)
+        sound.export(wav_file_path, format="wav")
         # 끝나는 시간 기록
         end_time = time.time()
 
         # 걸린 시간 계산
         elapsed_time = end_time - start_time
         print(f"tts 작업에 걸린 시간: {elapsed_time} 초")
-        return file_path
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        return wav_file_path
 
     def custom_tts_function(text, voice, language):
         global conversation_index
@@ -121,7 +129,8 @@ def sttgpttts(audio_file_path, ai_user_info):
         start_time = time.time()
         print(f"voice {voice}, language {language} text {text}")
         response = requests.post(
-           'http://127.0.0.1:5001/tts/',
+           # 'http://ec2-43-200-46-197.ap-northeast-2.compute.amazonaws.com:5001/tts/',
+            'http://127.0.0.1:5001/tts/',
            json={'voice': voice, 'language': language.name, 'text': text}
         )
         if response.status_code == 200:
@@ -132,7 +141,7 @@ def sttgpttts(audio_file_path, ai_user_info):
             elapsed_time = end_time - start_time
             print(f"tts api 작업에 걸린 시간: {elapsed_time} 초")
             start_time = time.time()
-            file_name = "ai" + str(conversation_index) + ".mp3"
+            file_name = f"ai{conversation_index}.wav"
             conversation_index += 1
 
             # 파일의 전체 경로를 생성합니다.
@@ -185,7 +194,7 @@ class AudioFileUpload(APIView):
                             status=status.HTTP_404_NOT_FOUND)
 
         start_time = time.time()
-        file_name = "user" + str(conversation_index) + ".mp3"
+        file_name = "user" + str(conversation_index) + ".wav"
         audio_file_path = os.path.join(store_url, file_name)
         with open(audio_file_path, 'wb+') as destination:
             for chunk in audio_file.chunks():
@@ -233,19 +242,35 @@ def get_audio_runtime(file_path):
     duration = int(audio.info.length)
     minutes, seconds = divmod(duration, 60)
     return f"{minutes:02}:{seconds:02}"
+
+def merge_wav_files(input_files, output_file):
+    # Create an empty AudioSegment
+    combined = AudioSegment.empty()
+
+    # Iterate over the list of input files and concatenate them
+    for file in input_files:
+        audio_path = os.path.join(store_url, file)
+        audio = AudioSegment.from_wav(audio_path)
+        combined += audio
+
+    # Export the combined AudioSegment to a new file
+    combined.export(output_file, format="wav")
+
 def mergeRecordings():
     global store_url
     global recording_index
     global conversation_index
     global conversation_history
 
-    audio_file_name = "combined_recording.mp3"
+    audio_file_name = "combined_recording.wav"
     audio_output_path = os.path.join(store_url, audio_file_name)
 
     # List all audio files in the directory
     user_files = [f for f in os.listdir(store_url) if f.startswith('user')]
     ai_files = [f for f in os.listdir(store_url) if f.startswith('ai')]
 
+    print(user_files)
+    print(ai_files)
     # Sort each list based on the numeric part
     user_files.sort(key=lambda x: int(x[4:].split('.')[0]))
     ai_files.sort(key=lambda x: int(x[2:].split('.')[0]))
@@ -256,11 +281,14 @@ def mergeRecordings():
         sorted_files.append(user)
         sorted_files.append(ai)
 
-    with open(audio_output_path, 'wb') as outfile:
-        for file_name in sorted_files:
-            file_path = os.path.join(store_url, file_name)
-            with open(file_path, 'rb') as infile:
-                outfile.write(infile.read())
+    print(sorted_files)
+    merge_wav_files(sorted_files, audio_output_path)
+
+    # with open(audio_output_path, 'wb') as outfile:
+    #     for file_name in sorted_files:
+    #         file_path = os.path.join(store_url, file_name)
+    #         with open(file_path, 'rb') as infile:
+    #             outfile.write(infile.read())
 
     for file_name in sorted_files:
         file_path = os.path.join(store_url, file_name)
