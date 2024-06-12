@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework import generics
 import requests
 from .serializers import *
-
+from rest_framework.parsers import FormParser, MultiPartParser
 from wakietalkie.models import AI_User
 from wakietalkie.serializers import AIUserSerializer
 
@@ -23,9 +23,12 @@ def serialize_object(obj, serializer_class):
 
 # AI User List and Create View
 class AIUserListCreateAPIView(APIView):
+    parser_classes = [FormParser, MultiPartParser]
+
     def get(self, request, format=None):
         ai_users = AI_User.objects.all()
-        return Response(serialize_list(ai_users, AIUserSerializer))
+        serializer = AIUserSerializer(ai_users, many=True)
+        return Response(serializer.data)
 
     def post(self, request, format=None):
         serializer = AIUserSerializer(data=request.data)
@@ -52,16 +55,19 @@ class AIVoiceTransfer(APIView):
 
 # AI User Detail, Update and Delete View
 class AIUserDetailAPIView(APIView):
+    parser_classes = [FormParser, MultiPartParser]
+
     def get_object(self, pk):
         return get_object_or_404(AI_User, pk=pk)
 
     def get(self, request, pk, format=None):
         ai_user = self.get_object(pk)
-        return Response(serialize_object(ai_user, AIUserSerializer))
+        serializer = AIUserSerializer(ai_user)
+        return Response(serializer.data)
 
     def put(self, request, pk, format=None):
         ai_user = self.get_object(pk)
-        serializer = AIUserSerializer(ai_user, data=request.data)
+        serializer = AIUserSerializer(ai_user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -85,13 +91,13 @@ class AIUserListByLanguageAPIView(generics.ListAPIView):
 
 
 #ai_user_img 받아오기-id변경..
-class AIUserImageView(APIView):
-    def get(self, request, ai_id, format=None):
-        try:
-            ai_user = AI_User.objects.get(id=ai_id)
-            if ai_user.profile_img:
-                return Response({'profile_img': ai_user.profile_img.url}, status=status.HTTP_200_OK)
-            else:
-                return Response({'error': 'No profile image found for this user'}, status=status.HTTP_404_NOT_FOUND)
-        except AI_User.DoesNotExist:
-            return Response({'error': 'AI user not found'}, status=status.HTTP_404_NOT_FOUND)
+# class AIUserImageView(APIView):
+#     def get(self, request, ai_id, format=None):
+#         try:
+#             ai_user = AI_User.objects.get(id=ai_id)
+#             if ai_user.profile_img:
+#                 return Response({'profile_img': ai_user.profile_img.url}, status=status.HTTP_200_OK)
+#             else:
+#                 return Response({'error': 'No profile image found for this user'}, status=status.HTTP_404_NOT_FOUND)
+#         except AI_User.DoesNotExist:
+#             return Response({'error': 'AI user not found'}, status=status.HTTP_404_NOT_FOUND)
