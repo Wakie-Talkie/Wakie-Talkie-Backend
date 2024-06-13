@@ -7,7 +7,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class AIUserSerializer(serializers.ModelSerializer):
-    profile_img = serializers.SerializerMethodField()
+    profile_img = serializers.ImageField(required=False)
 
     class Meta:
         model = AI_User

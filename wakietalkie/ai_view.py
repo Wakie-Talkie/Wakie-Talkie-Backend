@@ -26,7 +26,7 @@ def serialize_object(obj, serializer_class):
     return serializer.data
 def get_sample_voice(ai_user_info):
     sample_dir = "audio-storage/samples/"
-    file_name = f"{ai_user_info.nickname}"
+    file_name = f"{ai_user_info.nickname}_{ai_user_info.language}"
     os.makedirs(os.path.dirname(sample_dir), exist_ok=True)
     OPENAI_API_KEY = "key"
     client = OpenAI(api_key=OPENAI_API_KEY)
