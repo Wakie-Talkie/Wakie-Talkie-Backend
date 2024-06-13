@@ -25,18 +25,22 @@ def serialize_object(obj, serializer_class):
 class AIUserListCreateAPIView(APIView):
     parser_classes = [FormParser, MultiPartParser]
 
+    def get_serializer_context(self):
+        return {'request': self.request}
+
     def get(self, request, format=None):
         ai_users = AI_User.objects.all()
-        serializer = AIUserSerializer(ai_users, many=True)
+        context = self.get_serializer_context()
+        serializer = AIUserSerializer(ai_users, many=True, context=context)
         return Response(serializer.data)
 
     def post(self, request, format=None):
-        serializer = AIUserSerializer(data=request.data)
+        context = self.get_serializer_context()
+        serializer = AIUserSerializer(data=request.data, context=context)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class AIVoiceTransfer(APIView):
     def post(self, request, format=None):
@@ -60,14 +64,19 @@ class AIUserDetailAPIView(APIView):
     def get_object(self, pk):
         return get_object_or_404(AI_User, pk=pk)
 
+    def get_serializer_context(self):
+        return {'request': self.request}
+
     def get(self, request, pk, format=None):
         ai_user = self.get_object(pk)
-        serializer = AIUserSerializer(ai_user)
+        context = self.get_serializer_context()
+        serializer = AIUserSerializer(ai_user, context=context)
         return Response(serializer.data)
 
     def put(self, request, pk, format=None):
         ai_user = self.get_object(pk)
-        serializer = AIUserSerializer(ai_user, data=request.data, partial=True)
+        context = self.get_serializer_context()
+        serializer = AIUserSerializer(ai_user, data=request.data, partial=True, context=context)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -90,14 +99,3 @@ class AIUserListByLanguageAPIView(generics.ListAPIView):
             return AI_User.objects.all()
 
 
-#ai_user_img 받아오기-id변경..
-# class AIUserImageView(APIView):
-#     def get(self, request, ai_id, format=None):
-#         try:
-#             ai_user = AI_User.objects.get(id=ai_id)
-#             if ai_user.profile_img:
-#                 return Response({'profile_img': ai_user.profile_img.url}, status=status.HTTP_200_OK)
-#             else:
-#                 return Response({'error': 'No profile image found for this user'}, status=status.HTTP_404_NOT_FOUND)
-#         except AI_User.DoesNotExist:
-#             return Response({'error': 'AI user not found'}, status=status.HTTP_404_NOT_FOUND)

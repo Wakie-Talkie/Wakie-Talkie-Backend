@@ -7,10 +7,15 @@ class UserSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class AIUserSerializer(serializers.ModelSerializer):
+    profile_img_url = serializers.SerializerMethodField()
     class Meta:
         model = AI_User
         fields = '__all__'
-
+    def get_profile_img_url(self, obj):
+        request = self.context.get('request')
+        if obj.profile_img:
+            return request.build_absolute_uri(obj.profile_img.url)
+        return None
 class LanguageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Language
